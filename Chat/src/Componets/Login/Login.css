@@ -22,8 +22,8 @@ body {
   display: grid;
   place-items: center;
   background: #000428; 
-  background: -webkit-linear-gradient(to top, #004e92, #000428); 
-  background: linear-gradient(to top, #004e92, #000428); 
+  background: -webkit-linear-gradient(to top, pink, #000428); 
+  background: linear-gradient(to top, pink, #000428); 
   position: relative; 
   overflow: hidden; 
 }
@@ -143,7 +143,7 @@ body {
   font-size: 16px !important;
   font-weight: 600 !important;
   text-transform: none !important;
-  background: linear-gradient(45deg, #0077b6 30%, #00b4d8 90%) !important;
+  background: linear-gradient(45deg, pink 30%, hotpink 90%) !important;
   color: white !important;
   border-radius: 8px !important;
   box-shadow: 0 3px 5px 2px rgba(0, 119, 182, 0.3) !important;

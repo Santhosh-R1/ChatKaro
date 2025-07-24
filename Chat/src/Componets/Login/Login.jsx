@@ -6,7 +6,7 @@ import { signInWithPopup } from "firebase/auth";
 import { useStateValue } from "../ContextApi/StateProvider";
 import { actionTypes } from "../ContextApi/reducer";
 import { motion } from "framer-motion";
-import Logo from "../../Assets/chat-karo.png"; 
+import Logo from "../../Assets/pookie.png"; 
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -71,8 +71,8 @@ function Login() {
           variants={itemVariants}
         />
         <motion.div className="login__text" variants={itemVariants}>
-          <h1>Welcome to Chat Karo</h1>
-          <p>Your new favorite way to chat.</p>
+          <h1>Welcome to Pookie-Gram</h1>
+          <p>Chat with Your Pookies</p>
         </motion.div>
 
         <motion.div variants={itemVariants} style={{ width: '100%' }}>

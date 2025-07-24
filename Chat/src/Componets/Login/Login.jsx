@@ -6,7 +6,7 @@ import { signInWithPopup } from "firebase/auth";
 import { useStateValue } from "../ContextApi/StateProvider";
 import { actionTypes } from "../ContextApi/reducer";
 import { motion } from "framer-motion";
-import Logo from "../../assets/chat-karo.png"; 
+import Logo from "../../Assets/chat-karo.png"; 
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {

@@ -1,0 +1,78 @@
+
+.sidebarchat__container {
+  display: flex;
+  align-items: center;
+  padding: 0 15px; 
+  border-bottom: 1px solid #f0f2f5; 
+  transition: background-color 0.2s ease-in-out;
+}
+
+.sidebarchat__container:hover {
+  background-color: #f0f2f5;
+}
+
+.sidebarchat__link {
+  display: flex;
+  flex: 1; 
+  align-items: center;
+  padding: 12px 0; 
+  text-decoration: none;
+  color: inherit;
+  overflow: hidden; 
+}
+
+.sidebarchat__avatar {
+  width: 50px !important;
+  height: 50px !important;
+  margin-right: 15px;
+}
+
+.sidebarchat__info {
+  flex: 1;
+  overflow: hidden;
+}
+
+.sidebarchat__info h2 {
+  font-size: 17px;
+  font-weight: 400; 
+  color: #111b21; 
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebarchat__deleteIcon {
+  color: #54656f !important; 
+  margin-left: 10px;
+  opacity: 0.7; 
+  transition: color 0.2s ease, opacity 0.2s ease;
+}
+
+.sidebarchat__deleteIcon:hover {
+    color: #d32f2f !important; 
+    opacity: 1;
+}
+
+
+.sidebarchat__addNew {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 22px 16px; 
+  cursor: pointer;
+  border-bottom: 1px solid #e9edef;
+  background-color: #ffffff;
+  transition: background-color 0.2s ease;
+}
+
+.sidebarchat__addNew:hover {
+  background-color: #f0f2f5;
+}
+
+.sidebarchat__addNew h2 {
+  font-size: 16px;
+  font-weight: 500;
+  color: #005c4b; 
+  margin: 0;
+}

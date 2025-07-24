@@ -22,9 +22,7 @@ import Pusher from "pusher-js";
 import { motion, AnimatePresence } from "framer-motion";
 import { useReactMediaRecorder } from "react-media-recorder";
 import Picker from "emoji-picker-react";
-import Welcome from "../../Assets/CHAT KARO.png";
-
-// MUI Dialog components for the confirmation modal
+import Welcome from "../../Assets/chat-karo.png";
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';

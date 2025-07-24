@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import "./SidebarChat.css";
 import Avatar from "@mui/material/Avatar";
-import axios from "axios";
 import { Link } from "react-router-dom";
 import IconButton from "@mui/material/IconButton";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -12,15 +11,15 @@ import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
 import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField"; 
+import axiosInstance from "../../../BaseUrl";
 
-function SidebarChat({ addNewChat, name, id, avatar, onDelete }) {
+// Accept the new onAddChat prop
+function SidebarChat({ addNewChat, name, id, avatar, onDelete, onAddChat }) {
   const [isHovered, setIsHovered] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
-
   const [isAddChatDialogOpen, setIsAddChatDialogOpen] = useState(false);
   const [newRoomName, setNewRoomName] = useState("");
   const [newRoomAvatar, setNewRoomAvatar] = useState("");
-
 
   const handleOpenAddChatDialog = () => {
     setIsAddChatDialogOpen(true);
@@ -37,17 +36,26 @@ function SidebarChat({ addNewChat, name, id, avatar, onDelete }) {
       return;
     }
     try {
-      await axios.post("http://localhost:5000/group/create", {
+      // Get the response from the API call, which should contain the new room object
+      const response = await axiosInstance.post("group/create", {
         name: newRoomName,
         avatar: newRoomAvatar,
       });
+
+      // If the API call is successful and we have a new room...
+      if (response.data && response.data.data) {
+        // ...call the onAddChat function passed from the parent (SideBar)
+        onAddChat(response.data.data);
+      }
+      
     } catch (error) {
       console.log("Error creating chat room:", error);
+      alert("Failed to create chat. Please try again."); // Provide user feedback
     } finally {
+      // Close the dialog regardless of success or failure
       handleCloseAddChatDialog();
     }
   };
-
 
   const handleOpenDeleteDialog = (e) => {
     e.preventDefault(); 
@@ -60,11 +68,13 @@ function SidebarChat({ addNewChat, name, id, avatar, onDelete }) {
 
   const handleDeleteConfirm = async () => {
     try {
-      await axios.delete(`http://localhost:5000/room/delete/${id}`);
+      await axiosInstance.delete(`room/delete/${id}`);
+      // The onDelete prop already handles the UI update correctly
       onDelete(id);
       handleCloseDeleteDialog();
     } catch (error) {
       console.error("Failed to delete chat:", error);
+      alert("Failed to delete chat. Please try again.");
     }
   };
 
@@ -79,7 +89,7 @@ function SidebarChat({ addNewChat, name, id, avatar, onDelete }) {
           <DialogTitle sx={{ textAlign: 'center', pt: 3 }}>Create a new chat room</DialogTitle>
           <DialogContent>
             <DialogContentText sx={{ mb: 2, textAlign: 'center' }}>
-              Please enter a name for your new room. An avatar image is optional.
+              Please enter a name for your new room. An avatar image URL is optional.
             </DialogContentText>
             <TextField
               autoFocus
@@ -155,7 +165,7 @@ function SidebarChat({ addNewChat, name, id, avatar, onDelete }) {
               Are you sure you want to permanently delete "{name}"? This action cannot be undone.
             </DialogContentText>
           </DialogContent>
-          <DialogActions sx={{ justifyContent: 'center' }}>
+          <DialogActions sx={{ justifyContent: 'center', p: '16px 24px' }}>
             <Button onClick={handleCloseDeleteDialog}>Cancel</Button>
             <Button onClick={handleDeleteConfirm} color="error" variant="contained" autoFocus>
               Confirm Delete

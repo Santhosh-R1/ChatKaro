@@ -3,15 +3,13 @@ import Avatar from "@mui/material/Avatar";
 import IconButton from '@mui/material/IconButton'; 
 import LogoutIcon from '@mui/icons-material/Logout';
 import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
-
 import "./SideBar.css";
 import { useStateValue } from "../ContextApi/StateProvider";
 import { actionTypes } from "../ContextApi/reducer";
 import SidebarChat from "../Sidebar Chat/SidebarChat";
 import LogoutModal from "../LogoutModal/LogoutModal"; 
-import axios from "axios";
-import Pusher from "pusher-js";
 import { useNavigate } from "react-router-dom";
+import axiosInstance from "../../../BaseUrl";
 
 function SideBar() {
   const Navigate = useNavigate();
@@ -20,42 +18,40 @@ function SideBar() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // Fetch initial rooms on component mount
   useEffect(() => {
-    axios.get("http://localhost:5000/all/rooms").then((res) => {
+    axiosInstance.get(`all/rooms`).then((res) => {
         if (Array.isArray(res.data.data)) {
             setRooms(res.data.data);
         }
     }).catch((err) => console.error("Error fetching rooms:", err));
   }, []);
 
-  const handleDeleteRoom = (deletedRoomId) => {
-    setRooms((prevRooms) => prevRooms.filter((room) => room._id !== deletedRoomId));
+  // Handler to add a new room to the state instantly
+  const handleAddRoom = (newRoom) => {
+    setRooms((prevRooms) => [...prevRooms, newRoom]);
   };
 
-  useEffect(() => {
-    const pusher = new Pusher("f8a113bb8baf5e7d9826", { cluster: "ap2" });
-    const channel = pusher.subscribe("room");
-    channel.bind("inserted", (newRoom) => setRooms((prevRooms) => [...prevRooms, newRoom]));
-    channel.bind("deleted", (deletedRoom) => handleDeleteRoom(deletedRoom.id));
-
-    return () => {
-      channel.unbind_all();
-      channel.unsubscribe();
-    };
-  }, []);
-
+  // Handler to remove a deleted room from the state instantly
+  const handleDeleteRoom = (deletedRoomId) => {
+    setRooms((prevRooms) => prevRooms.filter((room) => room._id !== deletedRoomId));
+    // Optional: Navigate away if the deleted room is the currently active one
+    Navigate('/');
+  };
 
   const filteredRooms = rooms.filter((room) =>
     room.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleLogout = () => {
-    Navigate("/")
+    // Clear local/session storage if you store tokens there
+    localStorage.removeItem("user-token"); // Example
     dispatch({
       type: actionTypes.SET_USER,
       user: null,
     });
     setIsModalOpen(false); 
+    Navigate("/"); // Navigate after state update
   };
 
   return (
@@ -88,14 +84,16 @@ function SideBar() {
       </div>
 
       <div className="sidebar__chats">
-        <SidebarChat addNewChat />
+        {/* Pass the handler function as a prop */}
+        <SidebarChat addNewChat onAddChat={handleAddRoom} />
+        
         {filteredRooms.map((room) => (
           <SidebarChat
             key={room._id}
             id={room._id}
             name={room.name}
             avatar={room.avatar}
-            onDelete={handleDeleteRoom}
+            onDelete={handleDeleteRoom} // This already works correctly
           />
         ))}
       </div>

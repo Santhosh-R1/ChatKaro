@@ -5,6 +5,7 @@
   background-color: #f0f2f5;
 }
 
+/* --- NEW WELCOME SCREEN STYLES --- */
 .chat__welcome {
   display: flex;
   flex-direction: column;
@@ -12,45 +13,57 @@
   align-items: center;
   height: 100%;
   text-align: center;
-  color: #ccc; 
-  background-color: #000000;
+  background-color: #222e35; /* Softer dark background */
+  padding: 2rem;
+  box-sizing: border-box;
 }
 .chat__welcome > img {
-  width: 350px;
-  height: 350px;
+  width: 300px;
+  height: 300px;
   margin-bottom: 2rem;
-  opacity: 0.4;
+  opacity: 0.7; /* Increased visibility */
+  animation: float 6s ease-in-out infinite; /* Added floating animation */
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-15px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
 }
 
 @keyframes gradient-animation {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 .chat__welcome > h1 {
   font-size: 3rem;
   font-weight: 700; 
   margin-bottom: 1rem;
-  background: linear-gradient(
-    -45deg,
-    #ee7752,
-    #e73c7e,
-    #23a6d5,
-    #23d5ab
-  );
+  background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
   background-size: 400% 400%; 
   -webkit-background-clip: text; 
   -webkit-text-fill-color: transparent; 
   background-clip: text;
   animation: gradient-animation 10s ease infinite;
 }
+
+.chat__welcome > p {
+  font-size: 1rem;
+  color: #aebac1; /* Softer text color for dark background */
+  max-width: 450px;
+  line-height: 1.5;
+  margin-top: 0;
+}
+/* --- END OF NEW WELCOME SCREEN STYLES --- */
+
 
 .chat__header {
   padding: 10px 16px;

@@ -15,20 +15,19 @@ import {
   LocationOn,
   DeleteForever,
 } from "@mui/icons-material";
-import axios from "axios";
 import { useStateValue } from "../ContextApi/StateProvider";
 import { useParams } from "react-router-dom";
-import Pusher from "pusher-js";
 import { motion, AnimatePresence } from "framer-motion";
 import { useReactMediaRecorder } from "react-media-recorder";
 import Picker from "emoji-picker-react";
-import Welcome from "../../Assets/chat-karo.png";
+import Welcome from "../../Assets/pookie.png";
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import Button from '@mui/material/Button';
+import axiosInstance from "../../../BaseUrl";
 
 function Chat() {
   const [input, setInput] = useState("");
@@ -46,8 +45,6 @@ function Chat() {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [messageToDeleteId, setMessageToDeleteId] = useState(null);
   const fileInputRef = useRef(null);
-
-  // State to control the clear chat confirmation dialog
   const [isClearChatDialogOpen, setIsClearChatDialogOpen] = useState(false);
 
   const sendAudio = async (blob) => {
@@ -59,7 +56,7 @@ function Chat() {
     formData.append("uid", user.uid);
     formData.append("roomId", roomId);
     try {
-      await axios.post("http://localhost:5000/messages/new/audio", formData, {
+      await axiosInstance.post(`messages/new/audio`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
     } catch (error) {
@@ -77,14 +74,15 @@ function Chat() {
   };
   useEffect(scrollToBottom, [messages, searchQuery]);
 
+  // Effect for one-time setup when a room is selected
   useEffect(() => {
     if (roomId) {
-      axios.get(`http://localhost:5000/room/${roomId}`).then((res) => {
-        setRoomName(res.data?.data.name);
-        setUpdatedAt(res.data?.data.updatedAt);
-        setRoomAvatar(res.data?.data.avatar);
+      axiosInstance.get(`room/${roomId}`).then((res) => {
+        setRoomName(res.data?.data?.name);
+        setUpdatedAt(res.data?.data?.updatedAt);
+        setRoomAvatar(res.data?.data?.avatar);
       });
-      axios.get(`http://localhost:5000/messages/${roomId}`).then((res) => {
+      axiosInstance.get(`messages/${roomId}`).then((res) => {
         setMessages(Array.isArray(res.data?.message) ? res.data.message : []);
       });
       // Reset all UI states when the room changes
@@ -98,19 +96,30 @@ function Chat() {
     }
   }, [roomId]);
 
+  // Effect for live message polling (replaces Pusher)
   useEffect(() => {
-    const pusher = new Pusher("f8a113bb8baf5e7d9826", { cluster: "ap2" });
-    const channel = pusher.subscribe("message");
-    channel.bind("inserted", (newMessage) => {
-      if (newMessage.roomId === roomId) {
-        setMessages((prevMessages) => [...prevMessages, newMessage]);
-      }
-    });
-    return () => {
-      channel.unbind_all();
-      channel.unsubscribe();
+    if (!roomId) return;
+
+    const fetchLatestMessages = () => {
+        axiosInstance.get(`messages/${roomId}`).then((res) => {
+            const fetchedMessages = Array.isArray(res.data?.message) ? res.data.message : [];
+            setMessages(currentMessages => {
+                // Update state only if there's a change in messages
+                if (JSON.stringify(fetchedMessages) !== JSON.stringify(currentMessages)) {
+                    return fetchedMessages;
+                }
+                return currentMessages;
+            });
+        }).catch(err => console.error("Polling for messages failed:", err));
     };
+
+    // Poll for new messages every 5 seconds
+    const intervalId = setInterval(fetchLatestMessages, 5000);
+
+    // Cleanup interval on component unmount or when roomId changes
+    return () => clearInterval(intervalId);
   }, [roomId]);
+
 
   const sendMessage = async (e) => {
     e.preventDefault();
@@ -118,7 +127,7 @@ function Chat() {
     setShowEmojiPicker(false);
     const messageToSend = input;
     setInput("");
-    await axios.post("http://localhost:5000/messages/new", {
+    await axiosInstance.post(`messages/new`, {
       message: messageToSend,
       name: user.displayName,
       timestamp: new Date().toISOString(),
@@ -149,7 +158,7 @@ function Chat() {
     formData.append("messageType", messageType);
 
     try {
-      await axios.post("http://localhost:5000/messages/new/file", formData, {
+      await axiosInstance.post(`messages/new/file`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
     } catch (error) {
@@ -168,7 +177,8 @@ function Chat() {
       async (position) => {
         const { latitude, longitude } = position.coords;
         try {
-          await axios.post("http://localhost:5000/messages/new", {
+          // FIX: Correctly call axiosInstance post method
+          await axiosInstance.post(`messages/new`, {
             name: user.displayName,
             timestamp: new Date().toISOString(),
             uid: user.uid,
@@ -196,7 +206,7 @@ function Chat() {
 
   const handleConfirmClearChat = async () => {
     try {
-      await axios.delete(`http://localhost:5000/messages/clear/${roomId}`);
+      await axiosInstance.delete(`messages/clear/${roomId}`);
       setMessages([]);
     } catch (error) {
       console.error("Error clearing chat:", error);
@@ -208,7 +218,7 @@ function Chat() {
 
   const handleDeleteMessage = async (msgId) => {
     try {
-      await axios.delete(`http://localhost:5000/messages/delete/${msgId}`);
+      await axiosInstance.delete(`messages/delete/${msgId}`);
       setMessages((prev) => prev.filter((message) => message._id !== msgId));
       setMessageToDeleteId(null);
     } catch (error) {
@@ -229,11 +239,9 @@ function Chat() {
   const formatDate = (isoDate) => {
     if (!isoDate) return "";
     const date = new Date(isoDate);
-    
     const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0'); 
+    const month = String(date.getMonth() + 1).padStart(2, '0');
     const year = date.getFullYear();
-
     return `${day}/${month}/${year}`;
   };
 
@@ -286,9 +294,9 @@ function Chat() {
   if (!roomId) {
     return (
       <div className="chat chat__welcome">
-        <img src={Welcome} alt="Welcome to WhatsApp" />
-        <h1>CHAT KARO</h1>
-        <p>Send and receive messages without keeping your phone online.</p>
+        <img src={Welcome} alt="Welcome to Pookie Gram" />
+        <h1>POOKIE-GRAM</h1>
+        <p>Select a chat to start messaging. Your conversations are just a click away.</p>
       </div>
     );
   }
@@ -306,7 +314,7 @@ function Chat() {
         ) : (
           <div className="chat__headerInfo">
             <h3>{roomName}</h3>
-            <p>{updatedAt ? `Created at ${formatDate(updatedAt)}` : "..."}</p>
+            <p>{updatedAt ? `Created on ${formatDate(updatedAt)}` : "..."}</p>
           </div>
         )}
         <div className="chat__headerRight">
@@ -404,8 +412,7 @@ function Chat() {
           </IconButton>
         )}
       </div>
-
-      {/* Confirmation Dialog for Clearing Chat */}
+      
       <Dialog
         open={isClearChatDialogOpen}
         onClose={handleCloseClearDialog}

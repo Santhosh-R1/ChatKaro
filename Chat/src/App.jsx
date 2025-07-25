@@ -1,6 +1,7 @@
 import React from "react";
 import Login from "./Componets/Login/Login";
-import "./App.css";
+import "./App.css"; // Styles for the app layout
+import "./index.css"; // <-- IMPORT THE GLOBAL ANIMATED BACKGROUND STYLES
 import { useStateValue } from "./Componets/ContextApi/StateProvider";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Chat from "./Componets/Chat/Chat";
@@ -10,21 +11,22 @@ function App() {
   const [{ user }] = useStateValue();
 
   return (
-    <div className="app">
-      {!user ? (
-        <Login />
-      ) : (
-        <div className="app__body">
-          <Router>
+    <Router>
+      <div className="app">
+        {!user ? (
+          <Login />
+        ) : (
+          <div className="app__body">
             <SideBar />
             <Routes>
+              {/* The default chat view can be more generic */}
               <Route path="/" element={<Chat />} />
               <Route path="/rooms/:roomId" element={<Chat />} />
             </Routes>
-          </Router>
-        </div>
-      )}
-    </div>
+          </div>
+        )}
+      </div>
+    </Router>
   );
 }
 

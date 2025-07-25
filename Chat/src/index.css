@@ -1,5 +1,40 @@
-*{
-    margin: 0;
-    padding: 0;
-    
+/* src/index.css */
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap");
+
+/* Keyframes for the panning gradient animation */
+@keyframes animatedGradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+body {
+  margin: 0;
+  /* Define our beautiful "Pookie" theme gradient */
+  background: linear-gradient(-45deg, #f78ca0, #b279a7, #41295a, #2c3e50);
+  /* Make the gradient much larger than the screen */
+  background-size: 400% 400%;
+  /* Apply the animation */
+  animation: animatedGradient 20s ease infinite;
+  /* Set the global font for consistency */
+  font-family: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Optional: Better scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 10px;
 }

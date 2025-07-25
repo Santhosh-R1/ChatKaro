@@ -1,17 +1,25 @@
+/* src/Componets/SideBar/SideBar.css */
 
 .sidebar {
   display: flex;
   flex-direction: column;
-  flex: 0.35;
+  /* Adjust flex to be slightly slimmer for a modern look */
+  flex: 0.3;
+  min-width: 300px;
+  max-width: 400px;
+  height: 100%;
+  /* A subtle border to separate sidebar from the chat window */
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .sidebar__header {
   display: flex;
-  justify-content: space-between; 
+  justify-content: space-between;
   align-items: center;
-  padding: 20px;
-  border-right: 1px solid lightgray;
-  background-color: #f6f6f6; 
+  padding: 10px 16px;
+  height: 60px;
+  /* A slightly different transparency to distinguish the header section */
+  background-color: rgba(255, 255, 255, 0.05);
 }
 
 .sidebar__headerLeft {
@@ -20,89 +28,98 @@
   gap: 15px;
 }
 
+/* Style the user's avatar in the header */
+.sidebar__headerLeft > .MuiAvatar-root {
+  border: 2px solid rgba(255, 175, 204, 0.7);
+  box-shadow: 0 0 10px rgba(247, 140, 160, 0.3);
+}
+
 .sidebar__headerInfo > h4 {
-  margin: 0; 
-  font-weight: 500;
+  margin: 0;
+  font-weight: 600;
   font-size: 16px;
+  color: #f1f1f1; /* Light text color */
 }
 
 .sidebar__headerRight {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  min-width: 10vw; 
 }
 
-.sidebar__headerRight .MuiSvgIcon-root {
-  font-size: 24px !important;
-  color: #54656f;
+/* Style the logout button for our theme */
+.sidebar__logoutButton {
+  color: #f78ca0 !important; /* Themed pink color */
+  transition: all 0.3s ease !important;
 }
 
+.sidebar__logoutButton:hover {
+  background-color: rgba(247, 140, 160, 0.2) !important;
+  transform: scale(1.1);
+}
+
+/* Search section styling */
 .sidebar__search {
   display: flex;
   align-items: center;
-  background-color: #f6f6f6;
-  height: 39px;
-  padding: 10px;
+  background-color: rgba(0, 0, 0, 0.1); /* Slightly darker for contrast */
+  padding: 8px 15px;
 }
 
+/* Glass search bar container */
 .sidebar__searchContainer {
   display: flex;
   align-items: center;
-  background-color: white;
+  background-color: rgba(255, 255, 255, 0.08);
   width: 100%;
-  height: 35px;
+  height: 40px;
   border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .sidebar__searchContainer > .MuiSvgIcon-root {
-  color: gray;
+  color: #c0c0c0;
   padding: 10px;
 }
 
 .sidebar__searchContainer > input {
   border: none;
   outline: none;
-  margin-left: 10px;
+  background: transparent;
   width: 100%;
+  color: #f1f1f1; /* Light text color for input */
+  font-family: "Poppins", sans-serif;
+  font-size: 14px;
 }
 
+/* Style the placeholder text */
+.sidebar__searchContainer > input::placeholder {
+  color: #a0a0a0;
+  opacity: 1;
+}
+
+/* This is the container for all the chat cards */
 .sidebar__chats {
   flex: 1;
-  background-color: white;
-  overflow-y: auto; 
+  /* VERY IMPORTANT: No background color here.
+     This allows the main app's animated gradient to show through,
+     making the SidebarChat cards look like they're floating. */
+  overflow-y: auto;
 }
 
-.sidebar__header {
-  display: flex;
-  justify-content: space-between; 
-  padding: 20px;
-  border-right: 1px solid lightgray;
-  align-items: center; 
+/* Themed scrollbar for the chat list */
+.sidebar__chats::-webkit-scrollbar {
+  width: 6px;
 }
 
-.sidebar__headerLeft {
-  display: flex;
-  align-items: center;
+.sidebar__chats::-webkit-scrollbar-track {
+  background: transparent; /* Make track invisible */
 }
 
-.sidebar__headerInfo {
-    margin-left: 15px;
+.sidebar__chats::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
 }
 
-.sidebar__headerInfo > h4 {
-    margin: 0;
-    font-weight: 500;
+.sidebar__chats::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.4);
 }
-
-.sidebar__headerRight {
-  display: flex;
-  align-items: center;
-  justify-content: end;
-  min-width: 10vw; 
-}
-
-.sidebar__headerRight .MuiSvgIcon-root {
-  color: red;
-}
-

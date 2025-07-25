@@ -20,7 +20,7 @@ import { useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useReactMediaRecorder } from "react-media-recorder";
 import Picker from "emoji-picker-react";
-import Welcome from "../../Assets/pookie.png";
+import WelcomeLogo from "../../Assets/pookie.png"; // Use the same logo for consistency
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
@@ -29,7 +29,21 @@ import DialogTitle from '@mui/material/DialogTitle';
 import Button from '@mui/material/Button';
 import axiosInstance from "../../../BaseUrl";
 
+// Reusable styling for our themed "glass" dialogs
+const dialogSx = {
+  "& .MuiDialog-paper": {
+    background: "rgba(30, 30, 45, 0.6)",
+    backdropFilter: "blur(15px)",
+    "-webkit-backdrop-filter": "blur(15px)",
+    boxShadow: "0 8px 32px 0 rgba(0, 0, 0, 0.37)",
+    border: "1px solid rgba(255, 255, 255, 0.18)",
+    borderRadius: "15px",
+    color: "#f1f1f1",
+  },
+};
+
 function Chat() {
+  // All your existing state and refs are perfect
   const [input, setInput] = useState("");
   const [roomName, setRoomName] = useState("");
   const [updatedAt, setUpdatedAt] = useState("");
@@ -47,6 +61,9 @@ function Chat() {
   const fileInputRef = useRef(null);
   const [isClearChatDialogOpen, setIsClearChatDialogOpen] = useState(false);
 
+  // All your existing functions (sendAudio, sendMessage, etc.) are perfect and don't need changes.
+  // ... (Your existing logic for sendAudio, sendMessage, handleFileUpload, etc. goes here) ...
+  // ... No changes needed to any of your functions ...
   const sendAudio = async (blob) => {
     if (!blob) return;
     const formData = new FormData();
@@ -283,7 +300,7 @@ function Chat() {
         return message.location ? (
           <a href={`https://www.google.com/maps?q=${message.location.lat},${message.location.lon}`} target="_blank" rel="noopener noreferrer" className="chat__locationLink">
             <div className="chat__locationIcon"><LocationOn /></div>
-            <div className="chat__locationInfo"><span>Location</span><small>View on Google Maps</small></div>
+            <div className="chat__locationInfo"><span>Shared Location</span><small>View on Google Maps</small></div>
           </a>
         ) : ( <div className="chat__text">Invalid location data</div> );
       default:
@@ -294,9 +311,9 @@ function Chat() {
   if (!roomId) {
     return (
       <div className="chat chat__welcome">
-        <img src={Welcome} alt="Welcome to Pookie Gram" />
+        <img src={WelcomeLogo} alt="Welcome to Pookie Gram" />
         <h1>POOKIE-GRAM</h1>
-        <p>Select a chat to start messaging. Your conversations are just a click away.</p>
+        <p>Select a chat to start messaging with your favorite pookies.</p>
       </div>
     );
   }
@@ -307,7 +324,7 @@ function Chat() {
         <Avatar src={roomAvatar} />
         {showSearch ? (
           <motion.div className="chat__searchContainer" initial={{ width: 0, opacity: 0 }} animate={{ width: "100%", opacity: 1 }}>
-            <IconButton><SearchOutlined /></IconButton>
+            <SearchOutlined />
             <input placeholder="Search messages..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} autoFocus />
             <IconButton onClick={() => { setShowSearch(false); setSearchQuery(""); }}><Close /></IconButton>
           </motion.div>
@@ -323,7 +340,7 @@ function Chat() {
             <IconButton onClick={() => setShowAttachmentMenu((p) => !p)}><AttachFile /></IconButton>
             <AnimatePresence>
               {showAttachmentMenu && (
-                <motion.div className="chat__attachmentMenu" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}>
+                <motion.div className="chat__menu" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}>
                   <div onClick={handleFileSelection}><Photo />Photos & Videos</div>
                   <div onClick={handleFileSelection}><Description />Document</div>
                   <div onClick={sendLocation}><LocationOn />Location</div>
@@ -335,7 +352,7 @@ function Chat() {
             <IconButton onClick={() => setShowMoreMenu((p) => !p)}><MoreVert /></IconButton>
             <AnimatePresence>
               {showMoreMenu && (
-                <motion.div className="chat__moreMenu" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}>
+                <motion.div className="chat__menu" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}>
                   <div onClick={handleOpenClearDialog}><DeleteForever />Clear all chat</div>
                 </motion.div>
               )}
@@ -353,14 +370,11 @@ function Chat() {
               layout
               key={message._id}
               className={`chat__message ${message.uid === user.uid && "chat__receiver"}`}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              onDoubleClick={() => {
-                if (message.uid === user.uid) {
-                  setMessageToDeleteId(message._id);
-                }
-              }}
+              initial={{ opacity: 0, y: 20, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              onDoubleClick={() => message.uid === user.uid && setMessageToDeleteId(message._id)}
             >
               <AnimatePresence>
                 {messageToDeleteId === message._id && (
@@ -370,7 +384,6 @@ function Chat() {
                     initial={{ opacity: 0, scale: 0.5 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.5 }}
-                    transition={{ duration: 0.15, ease: "easeIn" }}
                   >
                     <DeleteForever />
                   </motion.div>
@@ -393,7 +406,7 @@ function Chat() {
           <IconButton onClick={() => setShowEmojiPicker((p) => !p)}><InsertEmoticon /></IconButton>
           {showEmojiPicker && (
             <div className="chat__emojiPickerContainer">
-              <Picker onEmojiClick={(e) => setInput((prev) => prev + e.emoji)} />
+              <Picker onEmojiClick={(e) => setInput((prev) => prev + e.emoji)} theme="dark" />
             </div>
           )}
         </div>
@@ -405,32 +418,24 @@ function Chat() {
           />
         </form>
         {input ? (
-          <IconButton type="submit" onClick={sendMessage}><Send /></IconButton>
+          <IconButton type="submit" onClick={sendMessage} className="chat__sendButton"><Send /></IconButton>
         ) : (
           <IconButton onClick={status === "recording" ? stopRecording : startRecording}>
             {status === "recording" ? <StopCircle className="chat__mic_recording" /> : <Mic />}
           </IconButton>
         )}
       </div>
-      
-      <Dialog
-        open={isClearChatDialogOpen}
-        onClose={handleCloseClearDialog}
-        aria-labelledby="clear-chat-dialog-title"
-        aria-describedby="clear-chat-dialog-description"
-        PaperProps={{ style: { borderRadius: '12px' } }}
-      >
-        <DialogTitle id="clear-chat-dialog-title" sx={{ textAlign: 'center', pt: 3 }}>
-          {"Clear all messages in this chat?"}
-        </DialogTitle>
+
+      <Dialog open={isClearChatDialogOpen} onClose={handleCloseClearDialog} sx={dialogSx}>
+        <DialogTitle>{"Clear all messages in this chat?"}</DialogTitle>
         <DialogContent>
-          <DialogContentText id="clear-chat-dialog-description" sx={{ textAlign: 'center' }}>
+          <DialogContentText sx={{ color: "#c0c0c0" }}>
             Are you sure you want to permanently delete all messages in "{roomName}"? This action cannot be undone.
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ justifyContent: 'center', p: '16px 24px' }}>
-          <Button onClick={handleCloseClearDialog} color="primary">Cancel</Button>
-          <Button onClick={handleConfirmClearChat} color="error" variant="contained" autoFocus>
+          <Button onClick={handleCloseClearDialog} sx={{ color: '#f1f1f1' }}>Cancel</Button>
+          <Button onClick={handleConfirmClearChat} variant="contained" autoFocus sx={{ backgroundColor: '#ff4d6d', '&:hover': { backgroundColor: '#ff3355' } }}>
             Clear Chat
           </Button>
         </DialogActions>

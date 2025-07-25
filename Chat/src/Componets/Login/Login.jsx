@@ -1,12 +1,15 @@
+// src/components/Login/Login.jsx
+
 import React from "react";
-import "./Login.css"; 
+import "./Login.css";
 import Button from "@mui/material/Button";
 import { auth, provider } from "../../firebase";
 import { signInWithPopup } from "firebase/auth";
 import { useStateValue } from "../ContextApi/StateProvider";
 import { actionTypes } from "../ContextApi/reducer";
 import { motion } from "framer-motion";
-import Logo from "../../Assets/pookie.png"; 
+import Logo from "../../Assets/pookie.png";
+
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -47,16 +50,10 @@ function Login() {
   return (
     <div className="login">
       <div className="background-bubbles">
-        <span></span>
-        <span></span>
-        <span></span>
-        <span></span>
-        <span></span>
-        <span></span>
-        <span></span>
-        <span></span>
-        <span></span>
-        <span></span>
+        {/* We can create more bubbles for a richer effect */}
+        {[...Array(15)].map((_, i) => (
+          <span key={i}></span>
+        ))}
       </div>
 
       <motion.div
@@ -67,11 +64,12 @@ function Login() {
       >
         <motion.img
           src={Logo}
-          alt="Talk Karo Logo"
+          alt="Pookie Gram Logo"
           variants={itemVariants}
+          className="pookie__logo"
         />
         <motion.div className="login__text" variants={itemVariants}>
-          <h1>Welcome to Pookie-Gram</h1>
+          <h1>Pookie-Gram</h1>
           <p>Chat with Your Pookies</p>
         </motion.div>
 

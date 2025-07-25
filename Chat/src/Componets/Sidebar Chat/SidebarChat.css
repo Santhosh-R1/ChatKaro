@@ -1,30 +1,34 @@
+/* src/Componets/SideBar/SidebarChat.css */
 
+/* This is the individual chat item "card" */
 .sidebarchat__container {
   display: flex;
   align-items: center;
-  padding: 0 15px; 
-  border-bottom: 1px solid #f0f2f5; 
-  transition: background-color 0.2s ease-in-out;
+  padding: 8px 15px; /* Adjust padding */
+  margin: 8px 10px; /* Add margin to separate the cards */
+  border-radius: 12px; /* Rounded corners for the card */
+  background-color: rgba(255, 255, 255, 0.05); /* Very subtle transparent background */
+  border: 1px solid rgba(255, 255, 255, 0.1); /* Subtle border for the glass effect */
+  transition: background-color 0.2s ease-in-out, transform 0.2s ease-in-out;
+  cursor: pointer;
 }
 
-.sidebarchat__container:hover {
-  background-color: #f0f2f5;
-}
+/* No need for a separate hover class, framer-motion handles it */
 
 .sidebarchat__link {
   display: flex;
-  flex: 1; 
+  flex: 1;
   align-items: center;
-  padding: 12px 0; 
   text-decoration: none;
   color: inherit;
-  overflow: hidden; 
+  overflow: hidden;
 }
 
 .sidebarchat__avatar {
-  width: 50px !important;
-  height: 50px !important;
+  width: 45px !important;
+  height: 45px !important;
   margin-right: 15px;
+  border: 2px solid rgba(255, 255, 255, 0.3); /* Give avatar a nice border */
 }
 
 .sidebarchat__info {
@@ -33,9 +37,9 @@
 }
 
 .sidebarchat__info h2 {
-  font-size: 17px;
-  font-weight: 400; 
-  color: #111b21; 
+  font-size: 16px;
+  font-weight: 400;
+  color: hotpink;
   margin: 0;
   white-space: nowrap;
   overflow: hidden;
@@ -43,36 +47,39 @@
 }
 
 .sidebarchat__deleteIcon {
-  color: #54656f !important; 
-  margin-left: 10px;
-  opacity: 0.7; 
-  transition: color 0.2s ease, opacity 0.2s ease;
+  /* A nice pinkish-red for the delete icon */
+  color: #ff8fab !important;
+  opacity: 0.8;
+  transition: color 0.2s ease, transform 0.2s ease !important;
 }
 
 .sidebarchat__deleteIcon:hover {
-    color: #d32f2f !important; 
-    opacity: 1;
+  color: #ff4d6d !important;
+  transform: scale(1.2);
 }
 
-
+/* Style for the "Add New Chat" button */
 .sidebarchat__addNew {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 22px 16px; 
+  padding: 15px;
+  margin: 15px 10px;
   cursor: pointer;
-  border-bottom: 1px solid #e9edef;
-  background-color: #ffffff;
-  transition: background-color 0.2s ease;
-}
-
-.sidebarchat__addNew:hover {
-  background-color: #f0f2f5;
+  border-radius: 12px;
+  border: 1px dashed rgba(247, 140, 160, 0.6); /* Dashed pink border */
+  transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
 .sidebarchat__addNew h2 {
   font-size: 16px;
-  font-weight: 500;
-  color: #005c4b; 
+  font-weight: 600;
+  /* Vibrant pink text */
+  color: #f78ca0;
   margin: 0;
+  transition: color 0.2s ease;
+}
+
+.sidebarchat__addNew:hover h2 {
+  color: hotpink; /* Text becomes white on hover */
 }

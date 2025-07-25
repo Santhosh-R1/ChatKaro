@@ -1,14 +1,33 @@
-.app{
-    display: grid;
-    place-items: center;
-    height: 100vh;
-  background: linear-gradient(45deg, pink 30%, hotpink 90%) !important;
+/* src/App.css */
+
+.app {
+  /* This main wrapper will center its content (either Login or app__body) */
+  display: grid;
+  place-items: center;
+  height: 100vh;
+  width: 100vw;
 }
-.app__body{
-    display: flex;
-  background: linear-gradient(45deg, pink 30%, hotpink 90%) !important;
-    margin-top: -50px;
-    height: 90vh;
-    width: 90vw;
-    box-shadow: -1px 4px 2px -6px rgba(0, 0, 0, 0.75);
+
+/* This is the main "glass" container for your chat application */
+.app__body {
+  display: flex;
+  height: 95vh;
+  width: 95vw;
+  max-width: 1500px; /* Prevents it from being too wide on large screens */
+  
+  /* The Glassmorphism Effect */
+  background: rgba(30, 30, 45, 0.4); /* Darker, semi-transparent background */
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  
+  /* A beautiful, soft shadow */
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  
+  /* A subtle border to define the edge */
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 15px;
+  
+  /* This is CRUCIAL for the glass effect. It ensures child elements 
+     (like the sidebar/chat backgrounds) don't spill out of the rounded corners. */
+  overflow: hidden; 
 }

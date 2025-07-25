@@ -1,17 +1,15 @@
-// src/Componets/SideBar/SideBar.jsx
 
 import React, { useEffect, useState } from "react";
 import Avatar from "@mui/material/Avatar";
 import IconButton from '@mui/material/IconButton';
 import LogoutIcon from '@mui/icons-material/Logout';
 import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
-import "./SideBar.css"; // We will update this file next
+import "./SideBar.css"; 
 import { useStateValue } from "../ContextApi/StateProvider";
 import { actionTypes } from "../ContextApi/reducer";
 import SidebarChat from "../Sidebar Chat/SidebarChat";
 import { useNavigate } from "react-router-dom";
 import axiosInstance from "../../../BaseUrl";
-// Assume LogoutModal is styled similarly to the other dialogs
 import LogoutModal from "../LogoutModal/LogoutModal"; 
 
 function SideBar() {
@@ -60,7 +58,6 @@ function SideBar() {
           </div>
         </div>
         <div className="sidebar__headerRight">
-          {/* Add a className for easier styling and hover effects */}
           <IconButton onClick={() => setIsModalOpen(true)} className="sidebar__logoutButton">
             <LogoutIcon />
           </IconButton>
@@ -92,7 +89,6 @@ function SideBar() {
         ))}
       </div>
 
-      {/* This modal should also be styled with the glass theme */}
       <LogoutModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}

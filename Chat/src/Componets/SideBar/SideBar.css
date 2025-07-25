@@ -1,14 +1,10 @@
-/* src/Componets/SideBar/SideBar.css */
-
 .sidebar {
   display: flex;
   flex-direction: column;
-  /* Adjust flex to be slightly slimmer for a modern look */
   flex: 0.3;
   min-width: 300px;
   max-width: 400px;
   height: 100%;
-  /* A subtle border to separate sidebar from the chat window */
   border-right: 1px solid rgba(255, 255, 255, 0.1);
 }
 
@@ -18,7 +14,6 @@
   align-items: center;
   padding: 10px 16px;
   height: 60px;
-  /* A slightly different transparency to distinguish the header section */
   background-color: rgba(255, 255, 255, 0.05);
 }
 
@@ -28,7 +23,6 @@
   gap: 15px;
 }
 
-/* Style the user's avatar in the header */
 .sidebar__headerLeft > .MuiAvatar-root {
   border: 2px solid rgba(255, 175, 204, 0.7);
   box-shadow: 0 0 10px rgba(247, 140, 160, 0.3);
@@ -38,7 +32,7 @@
   margin: 0;
   font-weight: 600;
   font-size: 16px;
-  color: #f1f1f1; /* Light text color */
+  color: #f1f1f1;
 }
 
 .sidebar__headerRight {
@@ -46,9 +40,8 @@
   align-items: center;
 }
 
-/* Style the logout button for our theme */
 .sidebar__logoutButton {
-  color: #f78ca0 !important; /* Themed pink color */
+  color: #f78ca0 !important; 
   transition: all 0.3s ease !important;
 }
 
@@ -57,15 +50,13 @@
   transform: scale(1.1);
 }
 
-/* Search section styling */
 .sidebar__search {
   display: flex;
   align-items: center;
-  background-color: rgba(0, 0, 0, 0.1); /* Slightly darker for contrast */
+  background-color: rgba(0, 0, 0, 0.1);
   padding: 8px 15px;
 }
 
-/* Glass search bar container */
 .sidebar__searchContainer {
   display: flex;
   align-items: center;
@@ -86,33 +77,27 @@
   outline: none;
   background: transparent;
   width: 100%;
-  color: #f1f1f1; /* Light text color for input */
+  color: #f1f1f1;
   font-family: "Poppins", sans-serif;
   font-size: 14px;
 }
 
-/* Style the placeholder text */
 .sidebar__searchContainer > input::placeholder {
   color: #a0a0a0;
   opacity: 1;
 }
 
-/* This is the container for all the chat cards */
 .sidebar__chats {
   flex: 1;
-  /* VERY IMPORTANT: No background color here.
-     This allows the main app's animated gradient to show through,
-     making the SidebarChat cards look like they're floating. */
   overflow-y: auto;
 }
 
-/* Themed scrollbar for the chat list */
 .sidebar__chats::-webkit-scrollbar {
   width: 6px;
 }
 
 .sidebar__chats::-webkit-scrollbar-track {
-  background: transparent; /* Make track invisible */
+  background: transparent; 
 }
 
 .sidebar__chats::-webkit-scrollbar-thumb {

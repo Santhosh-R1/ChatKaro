@@ -1,15 +1,11 @@
-/* src/Componets/Chat/Chat.css */
-
-/* Main Chat container - should be transparent to show app background */
 .chat {
   display: flex;
   flex-direction: column;
-  flex: 1; /* Take up remaining space */
+  flex: 1;
   background-color: transparent;
   height: 100%;
 }
 
-/* --- THEMED WELCOME SCREEN --- */
 .chat__welcome {
   display: flex;
   flex-direction: column;
@@ -44,7 +40,6 @@
   font-size: 2.5rem;
   font-weight: 600;
   margin-bottom: 1rem;
-  /* Animated gradient text for a premium feel */
   background: linear-gradient(-45deg, #f78ca0, #f9748f, #fd868c, #ffdde1);
   background-size: 400% 400%;
   -webkit-background-clip: text;
@@ -55,13 +50,12 @@
 
 .chat__welcome > p {
   font-size: 1rem;
-  color: #c0c0c0; /* Softer text color for readability */
+  color: #c0c0c0; 
   max-width: 450px;
   line-height: 1.6;
   margin-top: 0;
 }
 
-/* --- THEMED HEADER --- */
 .chat__header {
   padding: 10px 16px;
   display: flex;
@@ -108,7 +102,6 @@
   color: #f1f1f1;
 }
 
-/* --- THEMED MENUS (ATTACHMENT/MORE) --- */
 .chat__attachment, .chat__more { position: relative; }
 .chat__menu {
   position: absolute;
@@ -137,10 +130,9 @@
 .chat__menu > div:hover { background-color: rgba(255, 255, 255, 0.1); }
 .chat__menu .MuiSvgIcon-root { color: #c0c0c0; }
 
-/* --- THEMED CHAT BODY --- */
 .chat__body {
   flex: 1;
-  background: transparent; /* Let app background show through */
+  background: transparent; 
   padding: 20px 7%;
   overflow-y: auto;
   display: flex;
@@ -150,7 +142,6 @@
 .chat__body::-webkit-scrollbar-track { background: transparent; }
 .chat__body::-webkit-scrollbar-thumb { background-color: rgba(255, 255, 255, 0.2); border-radius: 3px; }
 
-/* --- THEMED MESSAGE BUBBLES --- */
 .chat__message {
   position: relative;
   font-size: 0.9rem;
@@ -161,7 +152,6 @@
   line-height: 1.4;
   word-wrap: break-word;
   align-self: flex-start;
-  /* Sender's message (default) glass style */
   background-color: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.15);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
@@ -169,8 +159,7 @@
 }
 .chat__receiver {
   align-self: flex-end;
-  /* Receiver's message (our message) glass style */
-  background-color: rgba(247, 140, 160, 0.3); /* Pookie pink */
+  background-color: rgba(247, 140, 160, 0.3); 
   border-color: rgba(247, 140, 160, 0.5);
 }
 
@@ -178,10 +167,10 @@
 .chat__name {
   font-weight: 600;
   font-size: 0.8rem;
-  color: #f78ca0; /* Themed name color */
+  color: #f78ca0;
   margin-bottom: 4px;
 }
-.chat__receiver .chat__name { display: none; } /* Don't show our own name */
+.chat__receiver .chat__name { display: none; } 
 .chat__timestamp {
   font-size: 0.7rem;
   color: #a0a0a0;
@@ -191,7 +180,6 @@
 }
 .chat__receiver .chat__timestamp { color: #e0c0c0; }
 
-/* Media, Document, and Location Messages */
 .chat__mediaImage, .chat__mediaVideo { max-width: 350px; width: 100%; height: auto; border-radius: 8px; }
 .chat__mediaCaption { padding-top: 5px; }
 .chat__documentLink, .chat__locationLink {
@@ -209,7 +197,6 @@
 .chat__documentInfo span, .chat__locationInfo span { font-weight: 500; }
 .chat__documentInfo small, .chat__locationInfo small { font-size: 0.8rem; color: #c0c0c0; }
 
-/* Delete icon on double-click */
 .chat__messageDelete {
   position: absolute;
   top: 50%;
@@ -230,7 +217,6 @@
 }
 .chat__messageDelete:hover { transform: translate(-100%, -50%) scale(1.1); }
 
-/* --- THEMED FOOTER --- */
 .chat__footer {
   display: flex;
   align-items: center;
@@ -261,7 +247,6 @@
 @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 .chat__audioPlayer { min-width: 280px; height: 45px; margin-top: 5px; }
 
-/* Themed Emoji Picker */
 .chat__emojiPickerContainer { position: absolute; bottom: 70px; left: 10px; z-index: 100; }
 .EmojiPickerReact.epr-main {
   --epr-bg-color: rgba(30, 30, 45, 0.9);

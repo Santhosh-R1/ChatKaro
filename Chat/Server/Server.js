@@ -1,4 +1,3 @@
-// server.js
 
 const express = require('express');
 const mongoose = require('mongoose');
@@ -6,7 +5,7 @@ const Rooms = require('./DbRooms');
 const Pusher = require("pusher");
 const cors = require('cors');
 const bodyParser = require('body-parser');
-const Message = require('./dbmsg'); // Your message model
+const Message = require('./dbmsg'); 
 
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
@@ -14,7 +13,6 @@ const { Readable } = require('stream');
 
 const app = express();
 
-// --- Pusher Configuration ---
 const pusher = new Pusher({
     appId: "1935999",
     key: "f8a113bb8baf5e7d9826",
@@ -23,11 +21,9 @@ const pusher = new Pusher({
     useTLS: true
 });
 
-// --- Middleware ---
 app.use(cors());
 app.use(bodyParser.json());
 
-// --- Cloudinary Configuration ---
 cloudinary.config({
   cloud_name: 'dpwx76ub2',
   api_key: '651975388482573',
@@ -35,11 +31,9 @@ cloudinary.config({
   secure: true
 });
 
-// --- Multer (File Upload) Configuration ---
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
-// --- Database Configuration ---
 const dbUrl = "mongodb+srv://santhoshrajan817:Santhosh007@whatsapp.vb52t.mongodb.net/whatsapp";
 mongoose.connect(dbUrl);
 const db = mongoose.connection;
@@ -47,7 +41,6 @@ const db = mongoose.connection;
 db.once("open", () => {
     console.log("DB connected");
 
-    // Watch for new rooms
     const roomCollection = db.collection("rooms");
     const changeStreamRooms = roomCollection.watch();
     changeStreamRooms.on("change", (change) => {
@@ -59,7 +52,6 @@ db.once("open", () => {
         }
     });
 
-    // Watch for new messages
     const msgCollection = db.collection("messages");
     const changeStreamMessages = msgCollection.watch();
     changeStreamMessages.on("change", (change) => {
@@ -72,9 +64,6 @@ db.once("open", () => {
     });
 });
 
-// === API ENDPOINTS ===
-
-// --- Basic Routes ---
 app.get("/", (req, res) => {
     res.send("Hello from the WhatsApp Clone Server!");
 });
@@ -91,7 +80,6 @@ app.get("/room/:id", (req, res) => {
         .catch((err) => res.status(500).send("Internal Server Error"));
 });
 
-// --- Message Routes ---
 app.get("/messages/:id", (req, res) => {
     Message.find({ roomId: req.params.id })
         .then((result) => res.status(200).json({ message: result }))
@@ -105,7 +93,6 @@ app.post("/messages/new", (req, res) => {
         .catch((err) => res.status(500).send("Error saving message"));
 });
 
-// --- File Upload Routes ---
 app.post("/messages/new/audio", upload.single('audio'), (req, res) => {
     if (!req.file) return res.status(400).send("No audio file uploaded.");
     
@@ -114,7 +101,7 @@ app.post("/messages/new/audio", upload.single('audio'), (req, res) => {
     readableAudioStream.push(null);
 
     const uploadStream = cloudinary.uploader.upload_stream(
-        { resource_type: "video" }, // Audio is treated as video by Cloudinary
+        { resource_type: "video" }, 
         (error, result) => {
             if (error) return res.status(500).send("Error uploading to cloud.");
             const dbMessage = new Message({
@@ -136,7 +123,7 @@ app.post("/messages/new/audio", upload.single('audio'), (req, res) => {
 app.post("/messages/new/file", upload.single('file'), (req, res) => {
     if (!req.file) return res.status(400).send("No file uploaded.");
     
-    let resourceType = 'auto'; // Let Cloudinary auto-detect
+    let resourceType = 'auto'; 
     
     const readableFileStream = new Readable();
     readableFileStream.push(req.file.buffer);
@@ -164,7 +151,6 @@ app.post("/messages/new/file", upload.single('file'), (req, res) => {
     readableFileStream.pipe(uploadStream);
 });
 
-// --- Deletion Routes ---
 app.delete("/messages/clear/:roomId", (req, res) => {
     const { roomId } = req.params;
     if (!roomId) return res.status(400).send("Room ID is required.");
@@ -188,7 +174,6 @@ app.delete("/messages/delete/:messageId", (req, res) => {
         .catch(err => res.status(500).send("Error deleting message."));
 });
 
-// --- Group Creation ---
 app.post("/group/create", (req, res) => {
     const { name, avatar } = req.body;
     if (!name) return res.status(400).json({ message: "Room name is required" });
@@ -206,17 +191,14 @@ app.delete("/room/delete/:roomId", async (req, res) => {
     }
 
     try {
-        // Step 1: Find and delete the room
         const deletedRoom = await Rooms.findByIdAndDelete(roomId);
 
         if (!deletedRoom) {
             return res.status(404).send({ message: "Room not found." });
         }
 
-        // Step 2: Delete all messages associated with that room
         await Message.deleteMany({ roomId: roomId });
         
-        // Optional: Trigger a pusher event to notify all clients
         pusher.trigger("room", "deleted", { id: roomId });
 
         res.status(200).send({ message: `Room '${deletedRoom.name}' and all its messages have been deleted.` });
@@ -226,7 +208,6 @@ app.delete("/room/delete/:roomId", async (req, res) => {
         res.status(500).send("Error deleting room.");
     }
 });
-// --- Start Server ---
 const PORT = 5000;
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);

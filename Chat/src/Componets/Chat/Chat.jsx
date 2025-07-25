@@ -20,7 +20,7 @@ import { useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useReactMediaRecorder } from "react-media-recorder";
 import Picker from "emoji-picker-react";
-import WelcomeLogo from "../../Assets/pookie.png"; // Use the same logo for consistency
+import WelcomeLogo from "../../Assets/pookie.png";
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
@@ -29,7 +29,6 @@ import DialogTitle from '@mui/material/DialogTitle';
 import Button from '@mui/material/Button';
 import axiosInstance from "../../../BaseUrl";
 
-// Reusable styling for our themed "glass" dialogs
 const dialogSx = {
   "& .MuiDialog-paper": {
     background: "rgba(30, 30, 45, 0.6)",
@@ -43,7 +42,6 @@ const dialogSx = {
 };
 
 function Chat() {
-  // All your existing state and refs are perfect
   const [input, setInput] = useState("");
   const [roomName, setRoomName] = useState("");
   const [updatedAt, setUpdatedAt] = useState("");
@@ -61,9 +59,6 @@ function Chat() {
   const fileInputRef = useRef(null);
   const [isClearChatDialogOpen, setIsClearChatDialogOpen] = useState(false);
 
-  // All your existing functions (sendAudio, sendMessage, etc.) are perfect and don't need changes.
-  // ... (Your existing logic for sendAudio, sendMessage, handleFileUpload, etc. goes here) ...
-  // ... No changes needed to any of your functions ...
   const sendAudio = async (blob) => {
     if (!blob) return;
     const formData = new FormData();
@@ -91,7 +86,6 @@ function Chat() {
   };
   useEffect(scrollToBottom, [messages, searchQuery]);
 
-  // Effect for one-time setup when a room is selected
   useEffect(() => {
     if (roomId) {
       axiosInstance.get(`room/${roomId}`).then((res) => {
@@ -102,7 +96,6 @@ function Chat() {
       axiosInstance.get(`messages/${roomId}`).then((res) => {
         setMessages(Array.isArray(res.data?.message) ? res.data.message : []);
       });
-      // Reset all UI states when the room changes
       setShowSearch(false);
       setSearchQuery("");
       setShowAttachmentMenu(false);
@@ -113,7 +106,6 @@ function Chat() {
     }
   }, [roomId]);
 
-  // Effect for live message polling (replaces Pusher)
   useEffect(() => {
     if (!roomId) return;
 
@@ -121,7 +113,6 @@ function Chat() {
         axiosInstance.get(`messages/${roomId}`).then((res) => {
             const fetchedMessages = Array.isArray(res.data?.message) ? res.data.message : [];
             setMessages(currentMessages => {
-                // Update state only if there's a change in messages
                 if (JSON.stringify(fetchedMessages) !== JSON.stringify(currentMessages)) {
                     return fetchedMessages;
                 }
@@ -130,10 +121,8 @@ function Chat() {
         }).catch(err => console.error("Polling for messages failed:", err));
     };
 
-    // Poll for new messages every 5 seconds
     const intervalId = setInterval(fetchLatestMessages, 5000);
 
-    // Cleanup interval on component unmount or when roomId changes
     return () => clearInterval(intervalId);
   }, [roomId]);
 
@@ -194,7 +183,6 @@ function Chat() {
       async (position) => {
         const { latitude, longitude } = position.coords;
         try {
-          // FIX: Correctly call axiosInstance post method
           await axiosInstance.post(`messages/new`, {
             name: user.displayName,
             timestamp: new Date().toISOString(),

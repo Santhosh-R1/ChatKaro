@@ -1,5 +1,3 @@
-// src/components/Login/Login.jsx
-
 import React from "react";
 import "./Login.css";
 import Button from "@mui/material/Button";
@@ -50,7 +48,6 @@ function Login() {
   return (
     <div className="login">
       <div className="background-bubbles">
-        {/* We can create more bubbles for a richer effect */}
         {[...Array(15)].map((_, i) => (
           <span key={i}></span>
         ))}

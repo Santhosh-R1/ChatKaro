@@ -1,19 +1,15 @@
-/* src/Componets/SideBar/SidebarChat.css */
-
-/* This is the individual chat item "card" */
 .sidebarchat__container {
   display: flex;
   align-items: center;
-  padding: 8px 15px; /* Adjust padding */
-  margin: 8px 10px; /* Add margin to separate the cards */
-  border-radius: 12px; /* Rounded corners for the card */
-  background-color: rgba(255, 255, 255, 0.05); /* Very subtle transparent background */
-  border: 1px solid rgba(255, 255, 255, 0.1); /* Subtle border for the glass effect */
+  padding: 8px 15px; 
+  margin: 8px 10px;
+  border-radius: 12px; 
+  background-color: rgba(255, 255, 255, 0.05); 
+  border: 1px solid rgba(255, 255, 255, 0.1); 
   transition: background-color 0.2s ease-in-out, transform 0.2s ease-in-out;
   cursor: pointer;
 }
 
-/* No need for a separate hover class, framer-motion handles it */
 
 .sidebarchat__link {
   display: flex;
@@ -28,7 +24,7 @@
   width: 45px !important;
   height: 45px !important;
   margin-right: 15px;
-  border: 2px solid rgba(255, 255, 255, 0.3); /* Give avatar a nice border */
+  border: 2px solid rgba(255, 255, 255, 0.3); 
 }
 
 .sidebarchat__info {
@@ -47,7 +43,6 @@
 }
 
 .sidebarchat__deleteIcon {
-  /* A nice pinkish-red for the delete icon */
   color: #ff8fab !important;
   opacity: 0.8;
   transition: color 0.2s ease, transform 0.2s ease !important;
@@ -58,7 +53,6 @@
   transform: scale(1.2);
 }
 
-/* Style for the "Add New Chat" button */
 .sidebarchat__addNew {
   display: flex;
   justify-content: center;
@@ -67,19 +61,18 @@
   margin: 15px 10px;
   cursor: pointer;
   border-radius: 12px;
-  border: 1px dashed rgba(247, 140, 160, 0.6); /* Dashed pink border */
+  border: 1px dashed rgba(247, 140, 160, 0.6);
   transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
 .sidebarchat__addNew h2 {
   font-size: 16px;
   font-weight: 600;
-  /* Vibrant pink text */
   color: #f78ca0;
   margin: 0;
   transition: color 0.2s ease;
 }
 
 .sidebarchat__addNew:hover h2 {
-  color: hotpink; /* Text becomes white on hover */
+  color: hotpink; 
 }

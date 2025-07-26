@@ -208,6 +208,73 @@ app.delete("/room/delete/:roomId", async (req, res) => {
         res.status(500).send("Error deleting room.");
     }
 });
+app.post("/room/:roomId/music-event", async (req, res) => {
+    const { roomId } = req.params;
+    const { eventType, eventData } = req.body;
+
+    let updateData = {};
+    const timestamp = new Date();
+
+    if (eventType === 'play-song') {
+        updateData = {
+            currentSongUrl: eventData.url,
+            currentSongTitle: eventData.title,
+            isPlaying: true,
+            lastEventTimestamp: timestamp,
+        };
+    } else if (eventType === 'pause-song') {
+        updateData = {
+            isPlaying: false,
+            lastEventTimestamp: timestamp,
+        };
+    } else if (eventType === 'stop-song') {
+        updateData = {
+            currentSongUrl: null,
+            currentSongTitle: null,
+            isPlaying: false,
+            lastEventTimestamp: timestamp,
+        };
+    } else {
+        return res.status(400).send("Invalid event type.");
+    }
+    
+    try {
+        await Rooms.findByIdAndUpdate(roomId, updateData);
+        res.status(200).send("Music state updated successfully.");
+    } catch (error) {
+        res.status(500).send("Error updating music state.");
+    }
+});
+
+app.get("/room/:roomId/music-state", (req, res) => {
+    const { roomId } = req.params;
+    Rooms.findById(roomId)
+        .select('currentSongUrl currentSongTitle isPlaying') 
+        .then(room => {
+            if (!room) return res.status(404).send("Room not found.");
+            res.status(200).json(room);
+        })
+        .catch(err => res.status(500).send("Error fetching music state."));
+});
+app.get("/api/music/search", async (req, res) => {
+    const { q } = req.query; // Get the search query from "?q=leo"
+
+    if (!q) {
+        return res.status(400).json({ message: "Search query 'q' is required." });
+    }
+
+    try {
+        const deezerResponse = await axios.get(`https://api.deezer.com/search?q=${encodeURIComponent(q)}`);
+        
+        // The actual list of songs is in the 'data' property of Deezer's response.
+        // We send just that part back to our frontend to keep it clean.
+        res.status(200).json(deezerResponse.data.data || []);
+
+    } catch (error) {
+        console.error("Error fetching from Deezer API:", error.message);
+        res.status(500).json({ message: "Failed to fetch songs from Deezer." });
+    }
+});
 const PORT = 5000;
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);

@@ -14,6 +14,7 @@ import {
   Description,
   LocationOn,
   DeleteForever,
+  MusicNote, // <-- ADDED ICON
 } from "@mui/icons-material";
 import { useStateValue } from "../ContextApi/StateProvider";
 import { useParams } from "react-router-dom";
@@ -28,6 +29,7 @@ import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import Button from '@mui/material/Button';
 import axiosInstance from "../../../BaseUrl";
+import MusicSearchModal from "./MusicSearchModal"; // <-- ADDED IMPORT
 
 const dialogSx = {
   "& .MuiDialog-paper": {
@@ -59,7 +61,14 @@ function Chat() {
   const fileInputRef = useRef(null);
   const [isClearChatDialogOpen, setIsClearChatDialogOpen] = useState(false);
 
+  // --- START: MUSIC FEATURE STATE ---
+  const audioRef = useRef(null);
+  const [isMusicModalOpen, setIsMusicModalOpen] = useState(false);
+  const [currentSong, setCurrentSong] = useState({ url: null, title: null, isPlaying: false });
+  // --- END: MUSIC FEATURE STATE ---
+
   const sendAudio = async (blob) => {
+    // ... (existing code is unchanged)
     if (!blob) return;
     const formData = new FormData();
     formData.append("audio", blob, "voice-message.wav");
@@ -86,15 +95,13 @@ function Chat() {
   };
   useEffect(scrollToBottom, [messages, searchQuery]);
 
+  // Effect for fetching room info and setting up polling
   useEffect(() => {
     if (roomId) {
       axiosInstance.get(`room/${roomId}`).then((res) => {
         setRoomName(res.data?.data?.name);
         setUpdatedAt(res.data?.data?.updatedAt);
         setRoomAvatar(res.data?.data?.avatar);
-      });
-      axiosInstance.get(`messages/${roomId}`).then((res) => {
-        setMessages(Array.isArray(res.data?.message) ? res.data.message : []);
       });
       setShowSearch(false);
       setSearchQuery("");
@@ -106,10 +113,12 @@ function Chat() {
     }
   }, [roomId]);
 
+  // Effect for polling messages and music state
   useEffect(() => {
     if (!roomId) return;
 
-    const fetchLatestMessages = () => {
+    // --- MESSAGE POLLING ---
+    const messageInterval = setInterval(() => {
         axiosInstance.get(`messages/${roomId}`).then((res) => {
             const fetchedMessages = Array.isArray(res.data?.message) ? res.data.message : [];
             setMessages(currentMessages => {
@@ -119,15 +128,85 @@ function Chat() {
                 return currentMessages;
             });
         }).catch(err => console.error("Polling for messages failed:", err));
+    }, 5000);
+
+    // --- MUSIC STATE POLLING ---
+    const musicPollInterval = setInterval(() => {
+      axiosInstance.get(`/room/${roomId}/music-state`).then(res => {
+        const newState = {
+          url: res.data.currentSongUrl,
+          title: res.data.currentSongTitle,
+          isPlaying: res.data.isPlaying,
+        };
+        // Only update state if it has actually changed to prevent re-renders
+        setCurrentSong(oldState => {
+          if (JSON.stringify(newState) !== JSON.stringify(oldState)) {
+            return newState;
+          }
+          return oldState;
+        });
+      });
+    }, 3000); // Poll every 3 seconds
+
+    return () => {
+      clearInterval(messageInterval);
+      clearInterval(musicPollInterval);
     };
-
-    const intervalId = setInterval(fetchLatestMessages, 5000);
-
-    return () => clearInterval(intervalId);
   }, [roomId]);
 
+  // Effect to control the audio element based on the currentSong state
+  useEffect(() => {
+    if (!audioRef.current) return;
+    if (currentSong.isPlaying) {
+      if (audioRef.current.src !== currentSong.url) {
+        audioRef.current.src = currentSong.url;
+      }
+      audioRef.current.play().catch(e => console.error("Audio play failed:", e));
+    } else {
+      audioRef.current.pause();
+    }
+    if (!currentSong.url) {
+      audioRef.current.src = "";
+    }
+  }, [currentSong]);
 
+  // --- START: MUSIC EVENT HANDLERS ---
+  const handleMusicEvent = async (eventType, eventData = {}) => {
+    if (!roomId) return;
+    try {
+      await axiosInstance.post(`/room/${roomId}/music-event`, { eventType, eventData });
+    } catch (error) {
+      console.error(`Error sending music event ${eventType}:`, error);
+    }
+  };
+
+  const handleSelectSong = (song) => {
+    const songData = {
+      url: song.preview,
+      title: `${song.title} - ${song.artist.name}`,
+    };
+    setCurrentSong({ ...songData, isPlaying: true });
+    handleMusicEvent('play-song', songData);
+  };
+
+  const pauseSharedSong = () => {
+    setCurrentSong(prev => ({ ...prev, isPlaying: false }));
+    handleMusicEvent('pause-song');
+  };
+
+  const resumeSharedSong = () => {
+    setCurrentSong(prev => ({ ...prev, isPlaying: true }));
+    handleMusicEvent('play-song', { url: currentSong.url, title: currentSong.title });
+  }
+
+  const stopSharedSong = () => {
+    setCurrentSong({ url: null, title: null, isPlaying: false });
+    handleMusicEvent('stop-song');
+  };
+  // --- END: MUSIC EVENT HANDLERS ---
+  
   const sendMessage = async (e) => {
+    // ... (existing code is unchanged)
     e.preventDefault();
     if (!input.trim() || status === "recording") return;
     setShowEmojiPicker(false);
@@ -142,159 +221,20 @@ function Chat() {
     });
   };
 
-  const handleFileSelection = () => {
-    setShowAttachmentMenu(false);
-    fileInputRef.current.click();
-  };
-
+  // ... (All other functions like handleFileSelection, sendLocation, etc. are unchanged)
+  const handleFileSelection = () => { setShowAttachmentMenu(false); fileInputRef.current.click(); };
   const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    let messageType = "document";
-    if (file.type.startsWith("image/")) messageType = "image";
-    else if (file.type.startsWith("video/")) messageType = "video";
-
-    const formData = new FormData();
-    formData.append("file", file, file.name);
-    formData.append("name", user.displayName);
-    formData.append("timestamp", new Date().toISOString());
-    formData.append("uid", user.uid);
-    formData.append("roomId", roomId);
-    formData.append("messageType", messageType);
-
-    try {
-      await axiosInstance.post(`messages/new/file`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-    } catch (error) {
-      console.error("Error uploading file:", error);
-      alert("Error uploading file. Please try again.");
-    }
-    e.target.value = null;
+    const file = e.target.files[0]; if (!file) return; let messageType = "document"; if (file.type.startsWith("image/")) messageType = "image"; else if (file.type.startsWith("video/")) messageType = "video"; const formData = new FormData(); formData.append("file", file, file.name); formData.append("name", user.displayName); formData.append("timestamp", new Date().toISOString()); formData.append("uid", user.uid); formData.append("roomId", roomId); formData.append("messageType", messageType); try { await axiosInstance.post(`messages/new/file`, formData, { headers: { "Content-Type": "multipart/form-data" }, }); } catch (error) { console.error("Error uploading file:", error); alert("Error uploading file. Please try again."); } e.target.value = null;
   };
-
-  const sendLocation = () => {
-    setShowAttachmentMenu(false);
-    if (!navigator.geolocation)
-      return alert("Geolocation is not supported by your browser.");
-
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-        try {
-          await axiosInstance.post(`messages/new`, {
-            name: user.displayName,
-            timestamp: new Date().toISOString(),
-            uid: user.uid,
-            roomId: roomId,
-            messageType: "location",
-            location: { lat: latitude, lon: longitude },
-          });
-        } catch (error) {
-          console.error("Error sending location:", error);
-          alert("Failed to send your location.");
-        }
-      },
-      () => alert("Unable to retrieve your location.")
-    );
-  };
-
-  const handleOpenClearDialog = () => {
-    setShowMoreMenu(false);
-    setIsClearChatDialogOpen(true);
-  };
-
-  const handleCloseClearDialog = () => {
-    setIsClearChatDialogOpen(false);
-  };
-
-  const handleConfirmClearChat = async () => {
-    try {
-      await axiosInstance.delete(`messages/clear/${roomId}`);
-      setMessages([]);
-    } catch (error) {
-      console.error("Error clearing chat:", error);
-      alert("Failed to clear the chat.");
-    } finally {
-      handleCloseClearDialog();
-    }
-  };
-
-  const handleDeleteMessage = async (msgId) => {
-    try {
-      await axiosInstance.delete(`messages/delete/${msgId}`);
-      setMessages((prev) => prev.filter((message) => message._id !== msgId));
-      setMessageToDeleteId(null);
-    } catch (error) {
-      console.error("Error deleting message:", error);
-      alert("Failed to delete the message.");
-    }
-  };
-
-  const formatTimestamp = (isoDate) => {
-    if (!isoDate) return "";
-    return new Date(isoDate).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    });
-  };
-
-  const formatDate = (isoDate) => {
-    if (!isoDate) return "";
-    const date = new Date(isoDate);
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
-  };
-
-  const filteredMessages = messages.filter((msg) => {
-    if (!searchQuery) return true;
-    const query = searchQuery.toLowerCase();
-    return (
-      (msg.message?.toLowerCase() || "").includes(query) ||
-      (msg.fileName?.toLowerCase() || "").includes(query)
-    );
-  });
-  
-  const renderMessageContent = (message) => {
-    switch (message.messageType) {
-      case "audio":
-        return <audio src={message.audioUrl} controls className="chat__audioPlayer" />;
-      case "image":
-        return (
-          <div className="chat__mediaContainer">
-            <img src={message.fileUrl} alt={message.fileName || "Sent image"} className="chat__mediaImage" />
-            {message.message && <p className="chat__mediaCaption">{message.message}</p>}
-          </div>
-        );
-      case "video":
-        return (
-          <div className="chat__mediaContainer">
-            <video src={message.fileUrl} controls className="chat__mediaVideo" />
-            {message.message && <p className="chat__mediaCaption">{message.message}</p>}
-          </div>
-        );
-      case "document":
-        return (
-          <a href={message.fileUrl} target="_blank" rel="noopener noreferrer" className="chat__documentLink">
-            <div className="chat__documentIcon"><Description /></div>
-            <div className="chat__documentInfo"><span>{message.fileName}</span><small>Document</small></div>
-          </a>
-        );
-      case "location":
-        return message.location ? (
-          <a href={`https://www.google.com/maps?q=${message.location.lat},${message.location.lon}`} target="_blank" rel="noopener noreferrer" className="chat__locationLink">
-            <div className="chat__locationIcon"><LocationOn /></div>
-            <div className="chat__locationInfo"><span>Shared Location</span><small>View on Google Maps</small></div>
-          </a>
-        ) : ( <div className="chat__text">Invalid location data</div> );
-      default:
-        return <div className="chat__text">{message.message}</div>;
-    }
-  };
+  const sendLocation = () => { setShowAttachmentMenu(false); if (!navigator.geolocation) return alert("Geolocation is not supported by your browser."); navigator.geolocation.getCurrentPosition( async (position) => { const { latitude, longitude } = position.coords; try { await axiosInstance.post(`messages/new`, { name: user.displayName, timestamp: new Date().toISOString(), uid: user.uid, roomId: roomId, messageType: "location", location: { lat: latitude, lon: longitude }, }); } catch (error) { console.error("Error sending location:", error); alert("Failed to send your location."); } }, () => alert("Unable to retrieve your location.") ); };
+  const handleOpenClearDialog = () => { setShowMoreMenu(false); setIsClearChatDialogOpen(true); };
+  const handleCloseClearDialog = () => { setIsClearChatDialogOpen(false); };
+  const handleConfirmClearChat = async () => { try { await axiosInstance.delete(`messages/clear/${roomId}`); setMessages([]); } catch (error) { console.error("Error clearing chat:", error); alert("Failed to clear the chat."); } finally { handleCloseClearDialog(); } };
+  const handleDeleteMessage = async (msgId) => { try { await axiosInstance.delete(`messages/delete/${msgId}`); setMessages((prev) => prev.filter((message) => message._id !== msgId)); setMessageToDeleteId(null); } catch (error) { console.error("Error deleting message:", error); alert("Failed to delete the message."); } };
+  const formatTimestamp = (isoDate) => { if (!isoDate) return ""; return new Date(isoDate).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true, }); };
+  const formatDate = (isoDate) => { if (!isoDate) return ""; const date = new Date(isoDate); const day = String(date.getDate()).padStart(2, '0'); const month = String(date.getMonth() + 1).padStart(2, '0'); const year = date.getFullYear(); return `${day}/${month}/${year}`; };
+  const filteredMessages = messages.filter((msg) => { if (!searchQuery) return true; const query = searchQuery.toLowerCase(); return ( (msg.message?.toLowerCase() || "").includes(query) || (msg.fileName?.toLowerCase() || "").includes(query) ); });
+  const renderMessageContent = (message) => { /*... (this function is unchanged) ...*/ switch (message.messageType) { case "audio": return <audio src={message.audioUrl} controls className="chat__audioPlayer" />; case "image": return ( <div className="chat__mediaContainer"> <img src={message.fileUrl} alt={message.fileName || "Sent image"} className="chat__mediaImage" /> {message.message && <p className="chat__mediaCaption">{message.message}</p>} </div> ); case "video": return ( <div className="chat__mediaContainer"> <video src={message.fileUrl} controls className="chat__mediaVideo" /> {message.message && <p className="chat__mediaCaption">{message.message}</p>} </div> ); case "document": return ( <a href={message.fileUrl} target="_blank" rel="noopener noreferrer" className="chat__documentLink"> <div className="chat__documentIcon"><Description /></div> <div className="chat__documentInfo"><span>{message.fileName}</span><small>Document</small></div> </a> ); case "location": return message.location ? ( <a href={`https://www.google.com/maps?q=${message.location.lat},${message.location.lon}`} target="_blank" rel="noopener noreferrer" className="chat__locationLink"> <div className="chat__locationIcon"><LocationOn /></div> <div className="chat__locationInfo"><span>Shared Location</span><small>View on Google Maps</small></div> </a> ) : ( <div className="chat__text">Invalid location data</div> ); default: return <div className="chat__text">{message.message}</div>; } };
 
   if (!roomId) {
     return (
@@ -308,6 +248,8 @@ function Chat() {
 
   return (
     <div className="chat">
+      <audio ref={audioRef} style={{ display: "none" }} />
+
       <div className="chat__header">
         <Avatar src={roomAvatar} />
         {showSearch ? (
@@ -324,6 +266,12 @@ function Chat() {
         )}
         <div className="chat__headerRight">
           {!showSearch && <IconButton onClick={() => setShowSearch(true)}><SearchOutlined /></IconButton>}
+
+          {/* --- ADDED MUSIC ICON --- */}
+          <IconButton onClick={() => setIsMusicModalOpen(true)}>
+              <MusicNote />
+          </IconButton>
+
           <div className="chat__attachment">
             <IconButton onClick={() => setShowAttachmentMenu((p) => !p)}><AttachFile /></IconButton>
             <AnimatePresence>
@@ -377,7 +325,6 @@ function Chat() {
                   </motion.div>
                 )}
               </AnimatePresence>
-
               {message.uid !== user.uid && <span className="chat__name">{message.name}</span>}
               <div className="chat__messageContent">
                 {renderMessageContent(message)}
@@ -388,6 +335,31 @@ function Chat() {
         </AnimatePresence>
         <div ref={messagesEndRef} />
       </div>
+
+      {/* --- ADDED MUSIC PLAYER BAR --- */}
+      <AnimatePresence>
+        {currentSong.url && (
+          <motion.div 
+            className="chat__musicPlayer"
+            initial={{ y: 50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 50, opacity: 0 }}
+          >
+            <div className="chat__musicPlayer_info">
+                <MusicNote fontSize="small" />
+                <span>Now Playing: {currentSong.title}</span>
+            </div>
+            <div className="chat__musicPlayer_controls">
+              {currentSong.isPlaying ? (
+                <IconButton onClick={pauseSharedSong}><span className="material-icons">pause</span></IconButton>
+              ) : (
+                <IconButton onClick={resumeSharedSong}><span className="material-icons">play_arrow</span></IconButton>
+              )}
+              <IconButton onClick={stopSharedSong}><span className="material-icons">stop</span></IconButton>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="chat__footer">
         <div className="chat__emoji">
@@ -413,6 +385,13 @@ function Chat() {
           </IconButton>
         )}
       </div>
+
+      {/* --- ADDED MUSIC MODAL RENDER --- */}
+      <MusicSearchModal 
+        open={isMusicModalOpen}
+        onClose={() => setIsMusicModalOpen(false)}
+        onSongSelect={handleSelectSong}
+      />
 
       <Dialog open={isClearChatDialogOpen} onClose={handleCloseClearDialog} sx={dialogSx}>
         <DialogTitle>{"Clear all messages in this chat?"}</DialogTitle>

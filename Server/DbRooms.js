@@ -7,6 +7,7 @@ const RoomSchema = new mongoose.Schema({
   currentSongUrl: { type: String, default: null },
   currentSongTitle: { type: String, default: null },
   isPlaying: { type: Boolean, default: false },
+  members: [{ type: String, required: true }]
 }, { timestamps: true });
 
 module.exports = mongoose.model("Room", RoomSchema);

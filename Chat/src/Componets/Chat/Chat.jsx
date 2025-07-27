@@ -4,7 +4,6 @@ import { Avatar, IconButton } from "@mui/material";
 import {
   SearchOutlined, AttachFile, MoreVert, InsertEmoticon, Mic, Send, StopCircle, Close, Photo, Description, LocationOn,
   DeleteForever, MusicNote, Pause, PlayArrow, Stop,
-  // --- NEW ICONS FOR VIDEO CALL ---
   Videocam, CallEnd, Phone, PhoneDisabled
 } from "@mui/icons-material";
 import { useStateValue } from "../ContextApi/StateProvider";
@@ -43,6 +42,7 @@ const dialogSx = {
 
 function Chat() {
   const [input, setInput] = useState("");
+  const [roomMembers, setRoomMembers] = useState([]);
   const [roomName, setRoomName] = useState("");
   const [updatedAt, setUpdatedAt] = useState("");
   const [roomAvatar, setRoomAvatar] = useState("");
@@ -80,7 +80,6 @@ function Chat() {
   useEffect(() => {
     if (!user || !user.uid) return;
 
-    // Register user with their unique ID to the socket server
     socket.emit("register-user", user.uid);
 
     // Listen for an incoming call
@@ -90,17 +89,17 @@ function Chat() {
       setCallerName(data.name);
       setCallerSignal(data.signal);
     });
-    
+
     // Listen for when the other user hangs up
     socket.on("call-ended", () => {
-        setCallEnded(true);
-        if(connectionRef.current) {
-            connectionRef.current.destroy();
-        }
-        // Reloading is a simple way to reset state, a more complex app might handle this differently
-        window.location.reload(); 
+      setCallEnded(true);
+      if (connectionRef.current) {
+        connectionRef.current.destroy();
+      }
+      // Reloading is a simple way to reset state, a more complex app might handle this differently
+      window.location.reload();
     });
-    
+
     // Cleanup on component unmount
     return () => {
       socket.off("hey-im-calling");
@@ -139,7 +138,7 @@ function Chat() {
           userVideo.current.srcObject = remoteStream;
         }
       });
-      
+
       // When the other user accepts, receive their signal (the "answer")
       socket.on("call-accepted", (signal) => {
         setCallAccepted(true);
@@ -166,7 +165,7 @@ function Chat() {
         trickle: false,
         stream: stream,
       });
-      
+
       // When this peer generates its signal (the "answer"), send it back to the caller
       peer.on("signal", (data) => {
         socket.emit("answer-call", { signal: data, to: caller });
@@ -178,7 +177,7 @@ function Chat() {
           userVideo.current.srcObject = remoteStream;
         }
       });
-      
+
       // Signal the caller's initial offer to complete the connection
       peer.signal(callerSignal);
 
@@ -201,10 +200,10 @@ function Chat() {
     if (stream) {
       stream.getTracks().forEach(track => track.stop());
     }
-     // Reloading is a simple way to reset state
+    // Reloading is a simple way to reset state
     window.location.reload();
   };
-  
+
   const declineCall = () => {
     setReceivingCall(false);
     // Optionally, you could emit an event to notify the caller that the call was rejected
@@ -212,17 +211,19 @@ function Chat() {
   }
 
   // Find the other user in the chat to call them (best for 1-on-1 chats)
-  const getOtherUserId = () => {
-    const otherUser = messages.find(msg => msg.uid !== user?.uid);
-    return otherUser ? otherUser.uid : null;
-  }
-  
+const getOtherUserId = () => {
+    if (!user || !user.uid || !roomMembers) return null;
+    
+    // Find the member in the room's member list that is NOT the current user.
+    // This is reliable and works even if no messages have been sent.
+    return roomMembers.find(memberId => memberId !== user.uid);
+  };
   // (All your existing functions like sendAudio, sendMessage, etc. remain here unchanged)
   const sendAudio = async (blob) => { if (!blob) return; const formData = new FormData(); formData.append("audio", blob, "voice-message.webm"); formData.append("name", user.displayName); formData.append("timestamp", new Date().toISOString()); formData.append("uid", user.uid); formData.append("roomId", roomId); formData.append("messageType", "audio"); try { await axiosInstance.post(`messages/new/audio`, formData, { headers: { "Content-Type": "multipart/form-data" }, }); } catch (error) { console.error("Error uploading audio:", error); alert("Failed to send voice message. Please try again."); } };
   const { status, startRecording, stopRecording } = useReactMediaRecorder({ audio: true, onStop: (blobUrl, blob) => sendAudio(blob), });
   const scrollToBottom = () => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); };
   useEffect(scrollToBottom, [messages, searchQuery]);
-  useEffect(() => { if (roomId) { axiosInstance.get(`room/${roomId}`).then((res) => { setRoomName(res.data?.data?.name); setUpdatedAt(res.data?.data?.updatedAt); setRoomAvatar(res.data?.data?.avatar); }); setShowSearch(false); setSearchQuery(""); setShowAttachmentMenu(false); setShowEmojiPicker(false); setShowMoreMenu(false); setMessageToDeleteId(null); setIsClearChatDialogOpen(false); } }, [roomId]);
+  useEffect(() => { if (roomId) { axiosInstance.get(`room/${roomId}`).then((res) => { setRoomName(res.data?.data?.name); setUpdatedAt(res.data?.data?.updatedAt); setRoomAvatar(res.data?.data?.avatar);setRoomMembers(res.data?.data?.members || []) }); setShowSearch(false); setSearchQuery(""); setShowAttachmentMenu(false); setShowEmojiPicker(false); setShowMoreMenu(false); setMessageToDeleteId(null); setIsClearChatDialogOpen(false); } }, [roomId]);
   useEffect(() => { if (!roomId) return; const fetchMessages = () => { axiosInstance.get(`messages/${roomId}`).then((res) => { const fetchedMessages = Array.isArray(res.data?.message) ? res.data.message : []; setMessages(currentMessages => JSON.stringify(fetchedMessages) !== JSON.stringify(currentMessages) ? fetchedMessages : currentMessages); }).catch(err => console.error("Polling for messages failed:", err)); }; const fetchMusicState = () => { axiosInstance.get(`/room/${roomId}/music-state`).then(res => { const newState = { url: res.data.currentSongUrl, title: res.data.currentSongTitle, isPlaying: res.data.isPlaying, }; setCurrentSong(oldState => JSON.stringify(newState) !== JSON.stringify(oldState) ? newState : oldState); }).catch(err => console.error("Polling for music state failed:", err)); }; fetchMessages(); fetchMusicState(); const messageInterval = setInterval(fetchMessages, 3000); const musicPollInterval = setInterval(fetchMusicState, 3000); return () => { clearInterval(messageInterval); clearInterval(musicPollInterval); }; }, [roomId]);
   useEffect(() => { const audio = audioRef.current; if (!audio) return; if (currentSong.isPlaying && currentSong.url) { if (audio.src !== currentSong.url) { audio.src = currentSong.url; } audio.play().catch(e => console.error("Audio play failed. User interaction might be required.", e)); } else { audio.pause(); } if (!currentSong.url) { audio.src = ""; } }, [currentSong]);
   const handleMusicEvent = async (eventType, eventData = {}) => { if (!roomId) return; try { await axiosInstance.post(`/room/${roomId}/music-event`, { eventType, eventData }); } catch (error) { console.error(`Error sending music event '${eventType}':`, error); } };
@@ -286,7 +287,7 @@ function Chat() {
           </div>
         </div>
       )}
-      
+
       {/* --- REGULAR CHAT UI --- */}
       <audio ref={audioRef} style={{ display: "none" }} onEnded={stopSharedSong} />
       <div className="chat__header">
@@ -304,17 +305,16 @@ function Chat() {
           </div>
         )}
         <div className="chat__headerRight">
-          {/* VIDEO CALL BUTTON */}
           <IconButton onClick={() => {
-              const otherUserId = getOtherUserId();
-              if (otherUserId) {
-                callUser(otherUserId);
-              } else {
-                alert("Cannot start a call. Make sure you are in a 1-on-1 chat.");
-              }
-            }}>
-              <Videocam />
-            </IconButton>
+            const otherUserId = getOtherUserId();
+            if (otherUserId) {
+              callUser(otherUserId);
+            } else {
+              alert("Cannot start a call. Make sure you are in a 1-on-1 chat.");
+            }
+          }}>
+            <Videocam />
+          </IconButton>
 
           {!showSearch && <IconButton onClick={() => setShowSearch(true)}><SearchOutlined /></IconButton>}
           <IconButton onClick={() => setIsMusicModalOpen(true)}><MusicNote /></IconButton>

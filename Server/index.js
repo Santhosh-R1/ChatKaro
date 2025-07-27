@@ -57,14 +57,21 @@ app.get("/", (req, res) => {
 });
 
 app.post("/group/create", (req, res) => {
-    const { name, avatar } = req.body;
-    if (!name) return res.status(400).json({ message: "Room name is required" });
-    let room = new Rooms({ name, avatar });
+    // The request body now needs to include 'members'
+    const { name, avatar, members } = req.body;
+
+    // Add validation for the members array
+    if (!name || !members || !Array.isArray(members) || members.length < 2) {
+        return res.status(400).json({ message: "Room name and at least two members are required" });
+    }
+
+    // Create a new room with the members
+    let room = new Rooms({ name, avatar, members });
+
     room.save()
         .then((result) => res.status(201).json({ data: result }))
         .catch((err) => res.status(500).json({ message: "Error creating room", error: err }));
 });
-
 app.get("/all/rooms", (req, res) => {
     Rooms.find().sort({ updatedAt: -1 }) 
         .then((rooms) => res.status(200).json({ data: rooms }))

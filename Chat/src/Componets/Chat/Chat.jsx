@@ -14,7 +14,10 @@ import {
   Description,
   LocationOn,
   DeleteForever,
-  MusicNote, // <-- ADDED ICON
+  MusicNote,
+   Pause,      
+  PlayArrow, 
+  Stop,     
 } from "@mui/icons-material";
 import { useStateValue } from "../ContextApi/StateProvider";
 import { useParams } from "react-router-dom";
@@ -29,7 +32,7 @@ import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import Button from '@mui/material/Button';
 import axiosInstance from "../../../BaseUrl";
-import MusicSearchModal from "./MusicSearchModal"; // <-- ADDED IMPORT
+import MusicSearchModal from "./MusicSearchModal";
 
 const dialogSx = {
   "& .MuiDialog-paper": {
@@ -61,14 +64,12 @@ function Chat() {
   const fileInputRef = useRef(null);
   const [isClearChatDialogOpen, setIsClearChatDialogOpen] = useState(false);
 
-  // --- START: MUSIC FEATURE STATE ---
+  // --- MUSIC FEATURE STATE ---
   const audioRef = useRef(null);
   const [isMusicModalOpen, setIsMusicModalOpen] = useState(false);
   const [currentSong, setCurrentSong] = useState({ url: null, title: null, isPlaying: false });
-  // --- END: MUSIC FEATURE STATE ---
 
   const sendAudio = async (blob) => {
-    // ... (existing code is unchanged)
     if (!blob) return;
     const formData = new FormData();
     formData.append("audio", blob, "voice-message.wav");
@@ -95,7 +96,7 @@ function Chat() {
   };
   useEffect(scrollToBottom, [messages, searchQuery]);
 
-  // Effect for fetching room info and setting up polling
+  // Effect for fetching room info
   useEffect(() => {
     if (roomId) {
       axiosInstance.get(`room/${roomId}`).then((res) => {
@@ -113,40 +114,38 @@ function Chat() {
     }
   }, [roomId]);
 
-  // Effect for polling messages and music state
+  // Effect for polling messages AND music state
   useEffect(() => {
     if (!roomId) return;
 
-    // --- MESSAGE POLLING ---
-    const messageInterval = setInterval(() => {
+    const fetchMessages = () => {
         axiosInstance.get(`messages/${roomId}`).then((res) => {
             const fetchedMessages = Array.isArray(res.data?.message) ? res.data.message : [];
-            setMessages(currentMessages => {
-                if (JSON.stringify(fetchedMessages) !== JSON.stringify(currentMessages)) {
-                    return fetchedMessages;
-                }
-                return currentMessages;
-            });
+            setMessages(currentMessages => 
+                JSON.stringify(fetchedMessages) !== JSON.stringify(currentMessages) ? fetchedMessages : currentMessages
+            );
         }).catch(err => console.error("Polling for messages failed:", err));
-    }, 5000);
+    };
 
-    // --- MUSIC STATE POLLING ---
-    const musicPollInterval = setInterval(() => {
+    const fetchMusicState = () => {
       axiosInstance.get(`/room/${roomId}/music-state`).then(res => {
         const newState = {
           url: res.data.currentSongUrl,
           title: res.data.currentSongTitle,
           isPlaying: res.data.isPlaying,
         };
-        // Only update state if it has actually changed to prevent re-renders
-        setCurrentSong(oldState => {
-          if (JSON.stringify(newState) !== JSON.stringify(oldState)) {
-            return newState;
-          }
-          return oldState;
-        });
-      });
-    }, 3000); // Poll every 3 seconds
+        // Only update state if the data has actually changed
+        setCurrentSong(oldState => 
+            JSON.stringify(newState) !== JSON.stringify(oldState) ? newState : oldState
+        );
+      }).catch(err => console.error("Polling for music state failed:", err));
+    };
+    
+    fetchMessages();
+    fetchMusicState();
+    
+    const messageInterval = setInterval(fetchMessages, 5000);
+    const musicPollInterval = setInterval(fetchMusicState, 3000);
 
     return () => {
       clearInterval(messageInterval);
@@ -156,36 +155,51 @@ function Chat() {
 
   // Effect to control the audio element based on the currentSong state
   useEffect(() => {
-    if (!audioRef.current) return;
-    if (currentSong.isPlaying) {
-      if (audioRef.current.src !== currentSong.url) {
-        audioRef.current.src = currentSong.url;
-      }
-      audioRef.current.play().catch(e => console.error("Audio play failed:", e));
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (currentSong.isPlaying && currentSong.url) {
+        if (audio.src !== currentSong.url) {
+            audio.src = currentSong.url;
+        }
+        audio.play().catch(e => console.error("Audio play failed. User interaction might be required.", e));
     } else {
-      audioRef.current.pause();
+        audio.pause();
     }
     if (!currentSong.url) {
-      audioRef.current.src = "";
+        audio.src = "";
     }
   }, [currentSong]);
 
-  // --- START: MUSIC EVENT HANDLERS ---
+  // --- MUSIC EVENT HANDLERS ---
   const handleMusicEvent = async (eventType, eventData = {}) => {
     if (!roomId) return;
     try {
       await axiosInstance.post(`/room/${roomId}/music-event`, { eventType, eventData });
     } catch (error) {
-      console.error(`Error sending music event ${eventType}:`, error);
+      console.error(`Error sending music event '${eventType}':`, error);
     }
   };
-
+  
+  // --- FIX APPLIED HERE ---
+  // This function now receives the full Spotify song object and works correctly.
   const handleSelectSong = (song) => {
+    // The check for `song.preview_url` will now succeed.
+    if (!song || !song.preview_url) {
+        console.error("Selected song has no preview URL.");
+        alert("Sorry, a preview is not available for this song.");
+        return;
+    }
+    
+    // Correctly extract data from the full song object
+    const artistNames = song.artists.map(artist => artist.name).join(', ');
     const songData = {
-      url: song.preview,
-      title: `${song.title} - ${song.artist.name}`,
+        url: song.preview_url,
+        title: `${song.name} - ${artistNames}`,
     };
+
+    // Update local state immediately for a responsive feel
     setCurrentSong({ ...songData, isPlaying: true });
+    // Send the event to the server to update for all users in the room
     handleMusicEvent('play-song', songData);
   };
 
@@ -195,18 +209,20 @@ function Chat() {
   };
 
   const resumeSharedSong = () => {
-    setCurrentSong(prev => ({ ...prev, isPlaying: true }));
-    handleMusicEvent('play-song', { url: currentSong.url, title: currentSong.title });
+    // Check if there is a song to resume
+    if (currentSong.url) {
+        setCurrentSong(prev => ({ ...prev, isPlaying: true }));
+        // 'play-song' event is correct here, as it sets the state to playing with the existing song data.
+        handleMusicEvent('play-song', { url: currentSong.url, title: currentSong.title });
+    }
   }
 
   const stopSharedSong = () => {
     setCurrentSong({ url: null, title: null, isPlaying: false });
     handleMusicEvent('stop-song');
   };
-  // --- END: MUSIC EVENT HANDLERS ---
   
   const sendMessage = async (e) => {
-    // ... (existing code is unchanged)
     e.preventDefault();
     if (!input.trim() || status === "recording") return;
     setShowEmojiPicker(false);
@@ -221,11 +237,9 @@ function Chat() {
     });
   };
 
-  // ... (All other functions like handleFileSelection, sendLocation, etc. are unchanged)
+  // ... (All other helper functions remain the same)
   const handleFileSelection = () => { setShowAttachmentMenu(false); fileInputRef.current.click(); };
-  const handleFileUpload = async (e) => {
-    const file = e.target.files[0]; if (!file) return; let messageType = "document"; if (file.type.startsWith("image/")) messageType = "image"; else if (file.type.startsWith("video/")) messageType = "video"; const formData = new FormData(); formData.append("file", file, file.name); formData.append("name", user.displayName); formData.append("timestamp", new Date().toISOString()); formData.append("uid", user.uid); formData.append("roomId", roomId); formData.append("messageType", messageType); try { await axiosInstance.post(`messages/new/file`, formData, { headers: { "Content-Type": "multipart/form-data" }, }); } catch (error) { console.error("Error uploading file:", error); alert("Error uploading file. Please try again."); } e.target.value = null;
-  };
+  const handleFileUpload = async (e) => { const file = e.target.files[0]; if (!file) return; let messageType = "document"; if (file.type.startsWith("image/")) messageType = "image"; else if (file.type.startsWith("video/")) messageType = "video"; const formData = new FormData(); formData.append("file", file, file.name); formData.append("name", user.displayName); formData.append("timestamp", new Date().toISOString()); formData.append("uid", user.uid); formData.append("roomId", roomId); formData.append("messageType", messageType); try { await axiosInstance.post(`messages/new/file`, formData, { headers: { "Content-Type": "multipart/form-data" }, }); } catch (error) { console.error("Error uploading file:", error); alert("Error uploading file. Please try again."); } e.target.value = null; };
   const sendLocation = () => { setShowAttachmentMenu(false); if (!navigator.geolocation) return alert("Geolocation is not supported by your browser."); navigator.geolocation.getCurrentPosition( async (position) => { const { latitude, longitude } = position.coords; try { await axiosInstance.post(`messages/new`, { name: user.displayName, timestamp: new Date().toISOString(), uid: user.uid, roomId: roomId, messageType: "location", location: { lat: latitude, lon: longitude }, }); } catch (error) { console.error("Error sending location:", error); alert("Failed to send your location."); } }, () => alert("Unable to retrieve your location.") ); };
   const handleOpenClearDialog = () => { setShowMoreMenu(false); setIsClearChatDialogOpen(true); };
   const handleCloseClearDialog = () => { setIsClearChatDialogOpen(false); };
@@ -234,7 +248,8 @@ function Chat() {
   const formatTimestamp = (isoDate) => { if (!isoDate) return ""; return new Date(isoDate).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true, }); };
   const formatDate = (isoDate) => { if (!isoDate) return ""; const date = new Date(isoDate); const day = String(date.getDate()).padStart(2, '0'); const month = String(date.getMonth() + 1).padStart(2, '0'); const year = date.getFullYear(); return `${day}/${month}/${year}`; };
   const filteredMessages = messages.filter((msg) => { if (!searchQuery) return true; const query = searchQuery.toLowerCase(); return ( (msg.message?.toLowerCase() || "").includes(query) || (msg.fileName?.toLowerCase() || "").includes(query) ); });
-  const renderMessageContent = (message) => { /*... (this function is unchanged) ...*/ switch (message.messageType) { case "audio": return <audio src={message.audioUrl} controls className="chat__audioPlayer" />; case "image": return ( <div className="chat__mediaContainer"> <img src={message.fileUrl} alt={message.fileName || "Sent image"} className="chat__mediaImage" /> {message.message && <p className="chat__mediaCaption">{message.message}</p>} </div> ); case "video": return ( <div className="chat__mediaContainer"> <video src={message.fileUrl} controls className="chat__mediaVideo" /> {message.message && <p className="chat__mediaCaption">{message.message}</p>} </div> ); case "document": return ( <a href={message.fileUrl} target="_blank" rel="noopener noreferrer" className="chat__documentLink"> <div className="chat__documentIcon"><Description /></div> <div className="chat__documentInfo"><span>{message.fileName}</span><small>Document</small></div> </a> ); case "location": return message.location ? ( <a href={`https://www.google.com/maps?q=${message.location.lat},${message.location.lon}`} target="_blank" rel="noopener noreferrer" className="chat__locationLink"> <div className="chat__locationIcon"><LocationOn /></div> <div className="chat__locationInfo"><span>Shared Location</span><small>View on Google Maps</small></div> </a> ) : ( <div className="chat__text">Invalid location data</div> ); default: return <div className="chat__text">{message.message}</div>; } };
+  const renderMessageContent = (message) => { switch (message.messageType) { case "audio": return <audio src={message.audioUrl} controls className="chat__audioPlayer" />; case "image": return ( <div className="chat__mediaContainer"> <img src={message.fileUrl} alt={message.fileName || "Sent image"} className="chat__mediaImage" /> {message.message && <p className="chat__mediaCaption">{message.message}</p>} </div> ); case "video": return ( <div className="chat__mediaContainer"> <video src={message.fileUrl} controls className="chat__mediaVideo" /> {message.message && <p className="chat__mediaCaption">{message.message}</p>} </div> ); case "document": return ( <a href={message.fileUrl} target="_blank" rel="noopener noreferrer" className="chat__documentLink"> <div className="chat__documentIcon"><Description /></div> <div className="chat__documentInfo"><span>{message.fileName}</span><small>Document</small></div> </a> ); case "location": return message.location ? ( <a href={`https://www.google.com/maps?q=${message.location.lat},${message.location.lon}`} target="_blank" rel="noopener noreferrer" className="chat__locationLink"> <div className="chat__locationIcon"><LocationOn /></div> <div className="chat__locationInfo"><span>Shared Location</span><small>View on Google Maps</small></div> </a> ) : ( <div className="chat__text">Invalid location data</div> ); default: return <div className="chat__text">{message.message}</div>; } };
+
 
   if (!roomId) {
     return (
@@ -248,8 +263,7 @@ function Chat() {
 
   return (
     <div className="chat">
-      <audio ref={audioRef} style={{ display: "none" }} />
-
+      <audio ref={audioRef} style={{ display: "none" }} onEnded={stopSharedSong} />
       <div className="chat__header">
         <Avatar src={roomAvatar} />
         {showSearch ? (
@@ -266,12 +280,9 @@ function Chat() {
         )}
         <div className="chat__headerRight">
           {!showSearch && <IconButton onClick={() => setShowSearch(true)}><SearchOutlined /></IconButton>}
-
-          {/* --- ADDED MUSIC ICON --- */}
           <IconButton onClick={() => setIsMusicModalOpen(true)}>
               <MusicNote />
           </IconButton>
-
           <div className="chat__attachment">
             <IconButton onClick={() => setShowAttachmentMenu((p) => !p)}><AttachFile /></IconButton>
             <AnimatePresence>
@@ -314,13 +325,7 @@ function Chat() {
             >
               <AnimatePresence>
                 {messageToDeleteId === message._id && (
-                  <motion.div
-                    className="chat__messageDelete"
-                    onClick={() => handleDeleteMessage(message._id)}
-                    initial={{ opacity: 0, scale: 0.5 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.5 }}
-                  >
+                  <motion.div className="chat__messageDelete" onClick={() => handleDeleteMessage(message._id)} initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.5 }}>
                     <DeleteForever />
                   </motion.div>
                 )}
@@ -336,26 +341,24 @@ function Chat() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* --- ADDED MUSIC PLAYER BAR --- */}
       <AnimatePresence>
         {currentSong.url && (
           <motion.div 
             className="chat__musicPlayer"
-            initial={{ y: 50, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 50, opacity: 0 }}
+            initial={{ y: 60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 60, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
           >
             <div className="chat__musicPlayer_info">
                 <MusicNote fontSize="small" />
-                <span>Now Playing: {currentSong.title}</span>
+                <span title={currentSong.title}>{currentSong.title}</span>
             </div>
             <div className="chat__musicPlayer_controls">
               {currentSong.isPlaying ? (
-                <IconButton onClick={pauseSharedSong}><span className="material-icons">pause</span></IconButton>
+                <IconButton onClick={pauseSharedSong} title="Pause"><Pause /></IconButton>
               ) : (
-                <IconButton onClick={resumeSharedSong}><span className="material-icons">play_arrow</span></IconButton>
+                <IconButton onClick={resumeSharedSong} title="Play"><PlayArrow /></IconButton>
               )}
-              <IconButton onClick={stopSharedSong}><span className="material-icons">stop</span></IconButton>
+              <IconButton onClick={stopSharedSong} title="Stop"><Stop /></IconButton>
             </div>
           </motion.div>
         )}
@@ -386,7 +389,6 @@ function Chat() {
         )}
       </div>
 
-      {/* --- ADDED MUSIC MODAL RENDER --- */}
       <MusicSearchModal 
         open={isMusicModalOpen}
         onClose={() => setIsMusicModalOpen(false)}

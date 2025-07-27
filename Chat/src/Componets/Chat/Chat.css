@@ -257,3 +257,72 @@
   --epr-hover-bg-color: rgba(255, 255, 255, 0.1);
   --epr-focus-bg-color: rgba(247, 140, 160, 0.3);
 }
+.chat__musicPlayer {
+  margin: 0 16px 16px 16px;
+  padding: 12px 16px;
+  border-radius: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  
+  /* Glassmorphism with Gradient Border */
+  background: rgba(30, 30, 45, 0.7);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border: 1px solid transparent;
+  background-clip: padding-box;
+  position: relative;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.chat__musicPlayer::before {
+  content: '';
+  position: absolute;
+  top: 0; right: 0; bottom: 0; left: 0;
+  z-index: -1;
+  margin: -1px; /* Make the pseudo-element slightly larger for the border effect */
+  border-radius: inherit; /* Inherit the border-radius */
+  
+  /* The animated gradient background for the border */
+  background: linear-gradient(to right, #f78ca0, #b279a7, #41295a, #b279a7, #f78ca0);
+  background-size: 400% 400%;
+  animation: animated-border 8s linear infinite;
+}
+
+.chat__musicPlayer_info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #f1f1f1;
+  overflow: hidden;
+  flex: 1;
+  padding-right: 10px;
+}
+.chat__musicPlayer_info .MuiSvgIcon-root {
+  color: #f78ca0; /* Pookie Pink for the note icon */
+  flex-shrink: 0; /* Prevents the icon from shrinking */
+}
+.chat__musicPlayer_info span {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chat__musicPlayer_controls {
+  display: flex;
+  align-items: center;
+}
+.chat__musicPlayer_controls .MuiIconButton-root {
+  color: #e0e0e0;
+  transition: all 0.2s ease-in-out;
+}
+.chat__musicPlayer_controls .MuiIconButton-root:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  transform: scale(1.1);
+}
+
+.chat__musicPlayer_controls .MuiSvgIcon-root {
+  font-size: 1.75rem; /* Make icons slightly larger */
+}

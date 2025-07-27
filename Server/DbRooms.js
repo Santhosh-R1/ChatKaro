@@ -6,7 +6,7 @@ const roomSchema = new mongoose.Schema({
     currentSongUrl: { type: String, default: null },
     currentSongTitle: { type: String, default: null },
     isPlaying: { type: Boolean, default: false },
-    lastEventTimestamp: { type: Date, default: Date.now } // Helps in syncing
+    lastEventTimestamp: { type: Date, default: Date.now }
 }, {
     timestamps: true
 });

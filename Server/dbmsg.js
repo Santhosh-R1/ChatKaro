@@ -1,26 +1,19 @@
 const mongoose = require('mongoose')
 
-const messageSchema = new mongoose.Schema({
-    message: { type: String }, 
-    name: { type: String, required: true },
-    timestamp: { type: String, required: true },
-    uid: { type: String, required: true },
-    roomId: { type: String, required: true },
-    
-    messageType: { 
-        type: String, 
-        enum: ['text', 'audio', 'image', 'video', 'document', 'location'],
-        default: 'text' 
-    },
-    fileUrl: { type: String }, 
-    audioUrl: { type: String }, 
-    fileName: { type: String },
-    location: {                 
-      lat: { type: Number },
-      lon: { type: Number },
-    }
-}, {
-    timestamps: true 
-});
+const MessageSchema = new mongoose.Schema({
+  roomId: { type: mongoose.Schema.Types.ObjectId, ref: 'Room', required: true, index: true },
+  uid: { type: String, required: true },
+  name: { type: String, required: true },
+  message: { type: String },
+  timestamp: { type: String, required: true },
+  messageType: { type: String, default: 'text' }, 
+  fileUrl: { type: String },
+  fileName: { type: String },
+  audioUrl: { type: String },
+  location: {
+    lat: { type: Number },
+    lon: { type: Number },
+  },
+}, { timestamps: true });
 
-module.exports = mongoose.model("messages", messageSchema);
+module.exports = mongoose.model("Message", MessageSchema);

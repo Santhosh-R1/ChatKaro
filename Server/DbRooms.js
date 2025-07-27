@@ -1,14 +1,12 @@
 const mongoose = require('mongoose');
 
-const roomSchema = new mongoose.Schema({
-    name: String,
-    avatar: String,
-    currentSongUrl: { type: String, default: null },
-    currentSongTitle: { type: String, default: null },
-    isPlaying: { type: Boolean, default: false },
-    lastEventTimestamp: { type: Date, default: Date.now }
-}, {
-    timestamps: true
-});
+const RoomSchema = new mongoose.Schema({
+  name: { type: String, required: true, trim: true },
+  avatar: { type: String },
+  updatedAt: { type: Date, default: Date.now },
+  currentSongUrl: { type: String, default: null },
+  currentSongTitle: { type: String, default: null },
+  isPlaying: { type: Boolean, default: false },
+}, { timestamps: true });
 
-module.exports = mongoose.model("rooms", roomSchema);
+module.exports = mongoose.model("Room", RoomSchema);

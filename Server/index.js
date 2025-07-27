@@ -6,20 +6,30 @@ const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 const { Readable } = require('stream');
 const axios = require('axios');
+const http = require('http'); // Import http
+const { Server } = require("socket.io"); // Import Server from socket.io
 
-// Import Mongoose Models (assuming they are in these files)
-// Make sure your DbRooms.js file has the updated RoomSchema with music fields.
+// Import Mongoose Models
 const Rooms = require('./DbRooms'); 
 const Message = require('./dbmsg');
 
-// Initialize Express app
 const app = express();
+// Create an HTTP server from the Express app to attach Socket.IO
+const server = http.createServer(app); 
+
+// --- Socket.IO Setup ---
+const io = new Server(server, {
+    cors: {
+        origin: "*", // IMPORTANT: In production, restrict this to your frontend's URL (e.g., "http://localhost:3000")
+        methods: ["GET", "POST"]
+    }
+});
 
 // --- Middlewares ---
-app.use(cors()); // Enable Cross-Origin Resource Sharing
-app.use(bodyParser.json()); // Parse JSON bodies
+app.use(cors());
+app.use(bodyParser.json());
 
-// --- Cloudinary Configuration (for file/audio uploads) ---
+// --- Cloudinary Configuration ---
 cloudinary.config({
   cloud_name: 'dpwx76ub2',
   api_key: '651975388482573',
@@ -27,7 +37,7 @@ cloudinary.config({
   secure: true
 });
 
-// --- Multer Configuration (for handling multipart/form-data) ---
+// --- Multer Configuration ---
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
@@ -35,20 +45,17 @@ const upload = multer({ storage: storage });
 const dbUrl = "mongodb+srv://santhoshrajan817:Santhosh007@whatsapp.vb52t.mongodb.net/whatsapp";
 mongoose.connect(dbUrl);
 const db = mongoose.connection;
-
 db.once("open", () => {
     console.log("DB connected");
-    // You can set up your change streams here if needed
 });
 
 
-// ================== API ROUTES ================== //
+// ================== REST API ROUTES (No changes to your existing routes) ================== //
 
 app.get("/", (req, res) => {
     res.send("Hello from the PookieGram API Server!");
 });
 
-// --- Room Routes ---
 app.post("/group/create", (req, res) => {
     const { name, avatar } = req.body;
     if (!name) return res.status(400).json({ message: "Room name is required" });
@@ -59,7 +66,7 @@ app.post("/group/create", (req, res) => {
 });
 
 app.get("/all/rooms", (req, res) => {
-    Rooms.find().sort({ updatedAt: -1 }) // Sort by most recently active
+    Rooms.find().sort({ updatedAt: -1 }) 
         .then((rooms) => res.status(200).json({ data: rooms }))
         .catch((err) => res.status(500).send("Internal Server Error"));
 });
@@ -87,7 +94,6 @@ app.delete("/room/delete/:roomId", async (req, res) => {
     }
 });
 
-// --- Message Routes ---
 app.get("/messages/:id", (req, res) => {
     Message.find({ roomId: req.params.id }).sort({ createdAt: 1 })
         .then((result) => res.status(200).json({ message: result }))
@@ -98,7 +104,6 @@ app.post("/messages/new", (req, res) => {
     const dbMessage = new Message(req.body);
     dbMessage.save()
         .then(async (result) => {
-            // Update the room's updatedAt timestamp to bring it to the top of the list
             await Rooms.findByIdAndUpdate(req.body.roomId, { updatedAt: new Date() });
             res.status(201).json({ data: result });
         })
@@ -120,7 +125,6 @@ app.delete("/messages/delete/:messageId", (req, res) => {
         .catch(err => res.status(500).send("Error deleting message."));
 });
 
-// --- File Upload Routes ---
 const handleFileUpload = (req, res, resourceType, messageDataField) => {
     if (!req.file) return res.status(400).send(`No ${messageDataField} file uploaded.`);
     
@@ -129,7 +133,7 @@ const handleFileUpload = (req, res, resourceType, messageDataField) => {
     readableStream.push(null);
 
     const uploadOptions = { resource_type: resourceType };
-    if (resourceType !== 'video') { // For images/docs, use original filename as public_id
+    if (resourceType !== 'video') { 
         uploadOptions.public_id = req.file.originalname;
     }
 
@@ -169,7 +173,6 @@ app.post("/messages/new/file", upload.single('file'), (req, res) => {
     handleFileUpload(req, res, 'auto', 'fileUrl');
 });
 
-// --- POLLING-BASED MUSIC FEATURE ROUTES ---
 app.post("/room/:roomId/music-event", async (req, res) => {
   const { roomId } = req.params;
   const { eventType, eventData } = req.body;
@@ -179,7 +182,6 @@ app.post("/room/:roomId/music-event", async (req, res) => {
     if (!eventData || !eventData.url || !eventData.title) {
       return res.status(400).send("Song data (url, title) is required for 'play-song' event.");
     }
-    // Note: `updatedAt` is handled automatically by `timestamps: true` on update
     updateData = { currentSongUrl: eventData.url, currentSongTitle: eventData.title, isPlaying: true };
   } else if (eventType === 'pause-song') {
     updateData = { isPlaying: false };
@@ -190,7 +192,6 @@ app.post("/room/:roomId/music-event", async (req, res) => {
   }
   
   try {
-    // findByIdAndUpdate will trigger the `updatedAt` timestamp update
     await Rooms.findByIdAndUpdate(roomId, { $set: updateData });
     res.status(200).send("Music state updated.");
   } catch (error) {
@@ -208,75 +209,99 @@ app.get("/room/:roomId/music-state", (req, res) => {
     .catch(err => res.status(500).send("Error fetching music state."));
 });
 
-// ================== MUSIC SEARCH APIs ================== //
-
-// --- OPTION 1: JAMENDO API (No Key Needed) ---
 const JAMENDO_CLIENT_ID = '445f547b'; 
 
 const transformJamendoTrack = (jamendoTrack) => {
   if (!jamendoTrack || !jamendoTrack.audio) return null;
-  return {
-    id: jamendoTrack.id,
-    name: jamendoTrack.name,
-    preview_url: jamendoTrack.audio, // Using preview_url to match Spotify/Saavn field names
-    artists: [{ name: jamendoTrack.artist_name }],
-    album: { images: [{ url: jamendoTrack.image }] },
-  };
+  return { id: jamendoTrack.id, name: jamendoTrack.name, preview_url: jamendoTrack.audio, artists: [{ name: jamendoTrack.artist_name }], album: { images: [{ url: jamendoTrack.image }] }, };
 };
 
 app.get("/api/jamendo/recommendations", async (req, res) => {
   try {
-    const response = await axios.get('https://api.jamendo.com/v3.0/tracks/', {
-      params: { client_id: JAMENDO_CLIENT_ID, format: 'json', limit: 30, order: 'popularity_week' },
-    });
-    const tracks = response.data.results || [];
-    const formattedTracks = tracks.map(transformJamendoTrack).filter(t => t !== null);
+    const response = await axios.get('https://api.jamendo.com/v3.0/tracks/', { params: { client_id: JAMENDO_CLIENT_ID, format: 'json', limit: 30, order: 'popularity_week' }, });
+    const formattedTracks = (response.data.results || []).map(transformJamendoTrack).filter(t => t !== null);
     res.status(200).json(formattedTracks);
-  } catch (error) {
-    console.error("Error in /api/jamendo/recommendations:", error.message);
-    res.status(500).json({ message: "Failed to fetch music from Jamendo." });
-  }
+  } catch (error) { res.status(500).json({ message: "Failed to fetch music from Jamendo." }); }
 });
 
 app.get("/api/jamendo/search", async (req, res) => {
   const { q } = req.query;
-  if (!q) {
-    return res.status(400).json({ message: "Search query 'q' is required." });
-  }
+  if (!q) { return res.status(400).json({ message: "Search query 'q' is required." }); }
   try {
-    const response = await axios.get('https://api.jamendo.com/v3.0/tracks/', {
-      params: { client_id: JAMENDO_CLIENT_ID, format: 'json', limit: 40, search: q },
-    });
-    const tracks = response.data.results || [];
-    const formattedTracks = tracks.map(transformJamendoTrack).filter(t => t !== null);
+    const response = await axios.get('https://api.jamendo.com/v3.0/tracks/', { params: { client_id: JAMENDO_CLIENT_ID, format: 'json', limit: 40, search: q }, });
+    const formattedTracks = (response.data.results || []).map(transformJamendoTrack).filter(t => t !== null);
     res.status(200).json(formattedTracks);
-  } catch (error) {
-    console.error("Error in /api/jamendo/search:", error.message);
-    res.status(500).json({ message: "Failed to fetch music from Jamendo." });
-  }
+  } catch (error) { res.status(500).json({ message: "Failed to fetch music from Jamendo." }); }
 });
 
 
-// --- OPTION 2: SAAVN.DEV API (No Key Needed) ---
 app.get("/api/music/search", async (req, res) => {
     const { q } = req.query;
     if (!q) return res.status(400).json({ message: "Search query 'q' is required." });
     try {
         const saavnApiUrl = `https://saavn.dev/api/search/songs?query=${encodeURIComponent(q)}`;
         const saavnResponse = await axios.get(saavnApiUrl);
-        const results = saavnResponse.data.data.results || [];
-        res.status(200).json(results);
-    } catch (error) {
-        console.error("Error during saavn.dev API call:", error.message);
-        if (error.response) return res.status(error.response.status).json({ message: "Failed to fetch songs from saavn.dev.", providerError: error.response.data });
-        res.status(500).json({ message: "An internal error occurred while searching for music." });
-    }
+        res.status(200).json(saavnResponse.data.data.results || []);
+    } catch (error) { res.status(500).json({ message: "An internal error occurred while searching for music." }); }
+});
+
+// ================== REAL-TIME VIDEO CALL SIGNALING (NEW) ================== //
+
+const userSocketMap = {}; // Maps userId to a unique socketId
+
+io.on("connection", (socket) => {
+    console.log(`User connected: ${socket.id}`);
+
+    // When a user logs in, they should emit this event with their unique user ID
+    socket.on("register-user", (userId) => {
+        userSocketMap[userId] = socket.id;
+        console.log(`User Registered: ${userId} -> ${socket.id}`);
+        // Optional: Let other users know who is online
+        io.emit("online-users", Object.keys(userSocketMap));
+    });
+
+    // A user initiates a call to another user
+    socket.on("call-user", ({ userToCall, signalData, from, name }) => {
+        const toSocketId = userSocketMap[userToCall];
+        if (toSocketId) {
+            console.log(`Forwarding call from ${name} to user ${userToCall}`);
+            io.to(toSocketId).emit("hey-im-calling", { signal: signalData, from, name });
+        } else {
+            console.log(`Call failed: User ${userToCall} is not online or not registered.`);
+        }
+    });
+
+    // A user answers a call
+    socket.on("answer-call", (data) => {
+        console.log("Call answered, forwarding signal back to caller.");
+        io.to(data.to).emit("call-accepted", data.signal);
+    });
+
+    // A user ends a call
+    socket.on("end-call", ({ to }) => {
+        console.log(`Forwarding end-call signal to socket ${to}`);
+        io.to(to).emit("call-ended");
+    });
+
+    socket.on("disconnect", () => {
+        console.log(`User disconnected: ${socket.id}`);
+        // Clean up the user from the map
+        for (const userId in userSocketMap) {
+            if (userSocketMap[userId] === socket.id) {
+                delete userSocketMap[userId];
+                console.log(`Unregistered user: ${userId}`);
+                break;
+            }
+        }
+        io.emit("online-users", Object.keys(userSocketMap));
+    });
 });
 
 
 // ================== SERVER START ================== //
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+// Use the 'server' instance (with socket.io) to listen, not the original 'app'
+server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });

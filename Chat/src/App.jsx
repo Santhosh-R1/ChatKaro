@@ -19,7 +19,6 @@ function App() {
           <div className="app__body">
             <SideBar />
             <Routes>
-              {/* The default chat view can be more generic */}
               <Route path="/" element={<Chat />} />
               <Route path="/rooms/:roomId" element={<Chat />} />
             </Routes>

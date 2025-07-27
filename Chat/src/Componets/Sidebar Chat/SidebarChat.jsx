@@ -12,17 +12,14 @@ import DialogTitle from "@mui/material/DialogTitle";
 import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
 import axiosInstance from "../../../BaseUrl";
-// Import motion for animations
 import { motion } from "framer-motion";
 
-// Animation variants for each chat item
 const chatItemVariants = {
   hidden: { opacity: 0, y: -20 },
   visible: { opacity: 1, y: 0 },
   hover: { scale: 1.03, backgroundColor: "rgba(255, 255, 255, 0.15)" },
 };
 
-// Styling for the glass dialogs
 const dialogSx = {
   "& .MuiDialog-paper": {
     background: "rgba(30, 30, 45, 0.6)",
@@ -36,13 +33,13 @@ const dialogSx = {
 };
 
 const textFieldSx = {
-  "& .MuiInputLabel-root": { color: "#c0c0c0" }, // Label color
-  "& .MuiInputLabel-root.Mui-focused": { color: "#f78ca0" }, // Label color when focused
+  "& .MuiInputLabel-root": { color: "#c0c0c0" }, 
+  "& .MuiInputLabel-root.Mui-focused": { color: "#f78ca0" },
   "& .MuiOutlinedInput-root": {
-    "& fieldset": { borderColor: "rgba(255, 255, 255, 0.3)" }, // Border color
-    "&:hover fieldset": { borderColor: "rgba(255, 255, 255, 0.6)" }, // Border on hover
-    "&.Mui-focused fieldset": { borderColor: "#f78ca0" }, // Border on focus
-    "& .MuiOutlinedInput-input": { color: "#ffffff" }, // Text color
+    "& fieldset": { borderColor: "rgba(255, 255, 255, 0.3)" }, 
+    "&:hover fieldset": { borderColor: "rgba(255, 255, 255, 0.6)" }, 
+    "&.Mui-focused fieldset": { borderColor: "#f78ca0" }, 
+    "& .MuiOutlinedInput-input": { color: "#ffffff" }, 
   },
 };
 
@@ -69,7 +66,6 @@ function SidebarChat({ addNewChat, name, id, avatar, onDelete, onAddChat }) {
   };
 
   const handleDeleteConfirm = async () => {
-    // ... (rest of your logic is fine, no changes needed here)
     try {
       await axiosInstance.delete(`room/delete/${id}`);
       onDelete(id);

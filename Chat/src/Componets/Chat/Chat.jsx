@@ -64,7 +64,6 @@ function Chat() {
   const fileInputRef = useRef(null);
   const [isClearChatDialogOpen, setIsClearChatDialogOpen] = useState(false);
 
-  // --- MUSIC FEATURE STATE ---
   const audioRef = useRef(null);
   const [isMusicModalOpen, setIsMusicModalOpen] = useState(false);
   const [currentSong, setCurrentSong] = useState({ url: null, title: null, isPlaying: false });
@@ -114,7 +113,6 @@ function Chat() {
     }
   }, [roomId]);
 
-  // Effect for polling messages AND music state
   useEffect(() => {
     if (!roomId) return;
 
@@ -134,7 +132,6 @@ function Chat() {
           title: res.data.currentSongTitle,
           isPlaying: res.data.isPlaying,
         };
-        // Only update state if the data has actually changed
         setCurrentSong(oldState => 
             JSON.stringify(newState) !== JSON.stringify(oldState) ? newState : oldState
         );
@@ -153,7 +150,6 @@ function Chat() {
     };
   }, [roomId]);
 
-  // Effect to control the audio element based on the currentSong state
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -170,7 +166,6 @@ function Chat() {
     }
   }, [currentSong]);
 
-  // --- MUSIC EVENT HANDLERS ---
   const handleMusicEvent = async (eventType, eventData = {}) => {
     if (!roomId) return;
     try {
@@ -180,26 +175,20 @@ function Chat() {
     }
   };
   
-  // --- FIX APPLIED HERE ---
-  // This function now receives the full Spotify song object and works correctly.
   const handleSelectSong = (song) => {
-    // The check for `song.preview_url` will now succeed.
     if (!song || !song.preview_url) {
         console.error("Selected song has no preview URL.");
         alert("Sorry, a preview is not available for this song.");
         return;
     }
     
-    // Correctly extract data from the full song object
     const artistNames = song.artists.map(artist => artist.name).join(', ');
     const songData = {
         url: song.preview_url,
         title: `${song.name} - ${artistNames}`,
     };
 
-    // Update local state immediately for a responsive feel
     setCurrentSong({ ...songData, isPlaying: true });
-    // Send the event to the server to update for all users in the room
     handleMusicEvent('play-song', songData);
   };
 
@@ -209,10 +198,8 @@ function Chat() {
   };
 
   const resumeSharedSong = () => {
-    // Check if there is a song to resume
     if (currentSong.url) {
         setCurrentSong(prev => ({ ...prev, isPlaying: true }));
-        // 'play-song' event is correct here, as it sets the state to playing with the existing song data.
         handleMusicEvent('play-song', { url: currentSong.url, title: currentSong.title });
     }
   }
@@ -237,7 +224,6 @@ function Chat() {
     });
   };
 
-  // ... (All other helper functions remain the same)
   const handleFileSelection = () => { setShowAttachmentMenu(false); fileInputRef.current.click(); };
   const handleFileUpload = async (e) => { const file = e.target.files[0]; if (!file) return; let messageType = "document"; if (file.type.startsWith("image/")) messageType = "image"; else if (file.type.startsWith("video/")) messageType = "video"; const formData = new FormData(); formData.append("file", file, file.name); formData.append("name", user.displayName); formData.append("timestamp", new Date().toISOString()); formData.append("uid", user.uid); formData.append("roomId", roomId); formData.append("messageType", messageType); try { await axiosInstance.post(`messages/new/file`, formData, { headers: { "Content-Type": "multipart/form-data" }, }); } catch (error) { console.error("Error uploading file:", error); alert("Error uploading file. Please try again."); } e.target.value = null; };
   const sendLocation = () => { setShowAttachmentMenu(false); if (!navigator.geolocation) return alert("Geolocation is not supported by your browser."); navigator.geolocation.getCurrentPosition( async (position) => { const { latitude, longitude } = position.coords; try { await axiosInstance.post(`messages/new`, { name: user.displayName, timestamp: new Date().toISOString(), uid: user.uid, roomId: roomId, messageType: "location", location: { lat: latitude, lon: longitude }, }); } catch (error) { console.error("Error sending location:", error); alert("Failed to send your location."); } }, () => alert("Unable to retrieve your location.") ); };

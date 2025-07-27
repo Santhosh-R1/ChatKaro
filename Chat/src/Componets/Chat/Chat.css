@@ -265,7 +265,6 @@
   align-items: center;
   justify-content: space-between;
   
-  /* Glassmorphism with Gradient Border */
   background: rgba(30, 30, 45, 0.7);
   backdrop-filter: blur(15px);
   -webkit-backdrop-filter: blur(15px);
@@ -280,10 +279,9 @@
   position: absolute;
   top: 0; right: 0; bottom: 0; left: 0;
   z-index: -1;
-  margin: -1px; /* Make the pseudo-element slightly larger for the border effect */
-  border-radius: inherit; /* Inherit the border-radius */
+  margin: -1px; 
+  border-radius: inherit; 
   
-  /* The animated gradient background for the border */
   background: linear-gradient(to right, #f78ca0, #b279a7, #41295a, #b279a7, #f78ca0);
   background-size: 400% 400%;
   animation: animated-border 8s linear infinite;
@@ -299,8 +297,8 @@
   padding-right: 10px;
 }
 .chat__musicPlayer_info .MuiSvgIcon-root {
-  color: #f78ca0; /* Pookie Pink for the note icon */
-  flex-shrink: 0; /* Prevents the icon from shrinking */
+  color: #f78ca0; 
+  flex-shrink: 0; 
 }
 .chat__musicPlayer_info span {
   font-weight: 500;
@@ -324,5 +322,5 @@
 }
 
 .chat__musicPlayer_controls .MuiSvgIcon-root {
-  font-size: 1.75rem; /* Make icons slightly larger */
+  font-size: 1.75rem; 
 }

@@ -1,11 +1,9 @@
+// Chat.jsx
+
 import React, { useEffect, useState, useRef } from "react";
 import "./Chat.css";
 import { Avatar, IconButton } from "@mui/material";
-import {
-  SearchOutlined, AttachFile, MoreVert, InsertEmoticon, Mic, Send, StopCircle, Close, Photo, Description, LocationOn,
-  DeleteForever, MusicNote, Pause, PlayArrow, Stop,
-  Videocam, CallEnd, Phone, PhoneDisabled
-} from "@mui/icons-material";
+import { SearchOutlined, AttachFile, MoreVert, InsertEmoticon, Mic, Send, StopCircle, Close, Photo, Description, LocationOn, DeleteForever, MusicNote, Pause, PlayArrow, Stop, Videocam, CallEnd, Phone, PhoneDisabled } from "@mui/icons-material";
 import { useStateValue } from "../ContextApi/StateProvider";
 import { useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -21,24 +19,13 @@ import Button from '@mui/material/Button';
 import axiosInstance from "../../../BaseUrl";
 import MusicSearchModal from "./MusicSearchModal";
 // --- NEW IMPORTS FOR VIDEO CALL ---
-import Peer from "simple-peer";
+import Peer from "simple-peer/simplepeer.min.js"; // <--- THIS IS THE FIX
 import io from "socket.io-client";
 
 // --- SOCKET CONNECTION SETUP ---
-// Connect to your backend server where Socket.IO is running.
-// The useRef hook ensures the socket connection is stable across re-renders.
-const socket = io("http://localhost:5000"); // Use your backend URL
+const socket = io("http://localhost:5000"); 
 
-const dialogSx = {
-  "& .MuiDialog-paper": {
-    background: "rgba(30, 30, 45, 0.6)",
-    backdropFilter: "blur(15px)",
-    boxShadow: "0 8px 32px 0 rgba(0, 0, 0, 0.37)",
-    border: "1px solid rgba(255, 255, 255, 0.18)",
-    borderRadius: "15px",
-    color: "#f1f1f1",
-  },
-};
+const dialogSx = { "& .MuiDialog-paper": { background: "rgba(30, 30, 45, 0.6)", backdropFilter: "blur(15px)", boxShadow: "0 8px 32px 0 rgba(0, 0, 0, 0.37)", border: "1px solid rgba(255, 255, 255, 0.18)", borderRadius: "15px", color: "#f1f1f1" } };
 
 function Chat() {
   const [input, setInput] = useState("");
@@ -65,7 +52,7 @@ function Chat() {
   // --- NEW STATE VARIABLES FOR VIDEO CALL ---
   const [stream, setStream] = useState(null);
   const [receivingCall, setReceivingCall] = useState(false);
-  const [caller, setCaller] = useState("");
+  const [caller, setCaller] = useState(""); 
   const [callerName, setCallerName] = useState("");
   const [callerSignal, setCallerSignal] = useState();
   const [callAccepted, setCallAccepted] = useState(false);
@@ -82,47 +69,45 @@ function Chat() {
 
     socket.emit("register-user", user.uid);
 
-    // Listen for an incoming call
     socket.on("hey-im-calling", (data) => {
       setReceivingCall(true);
-      setCaller(data.from);
+      setCaller(data.from); 
       setCallerName(data.name);
       setCallerSignal(data.signal);
     });
 
-    // Listen for when the other user hangs up
     socket.on("call-ended", () => {
       setCallEnded(true);
       if (connectionRef.current) {
         connectionRef.current.destroy();
       }
-      // Reloading is a simple way to reset state, a more complex app might handle this differently
       window.location.reload();
     });
 
-    // Cleanup on component unmount
+    // We also need a listener for when the call is accepted by the other user
+    socket.on("call-accepted", (signal) => {
+      setCallAccepted(true);
+      // This check is crucial. Only the initiator of the call should signal back.
+      if (connectionRef.current) {
+        connectionRef.current.signal(signal);
+      }
+    });
+
     return () => {
       socket.off("hey-im-calling");
       socket.off("call-ended");
+      socket.off("call-accepted"); // Cleanup listener
     };
-
   }, [user]);
 
+  // --- VIDEO CALL FUNCTIONS ---
   const callUser = (idToCall) => {
     navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then((stream) => {
       setStream(stream);
-      if (myVideo.current) {
-        myVideo.current.srcObject = stream;
-      }
+      if (myVideo.current) myVideo.current.srcObject = stream;
 
-      // Create a new peer connection as the initiator
-      const peer = new Peer({
-        initiator: true,
-        trickle: false,
-        stream: stream,
-      });
+      const peer = new Peer({ initiator: true, trickle: false, stream: stream });
 
-      // When the peer generates a signal (the "offer"), send it to the other user
       peer.on("signal", (data) => {
         socket.emit("call-user", {
           userToCall: idToCall,
@@ -132,17 +117,8 @@ function Chat() {
         });
       });
 
-      // When the other user's stream is received, display it
       peer.on("stream", (remoteStream) => {
-        if (userVideo.current) {
-          userVideo.current.srcObject = remoteStream;
-        }
-      });
-
-      // When the other user accepts, receive their signal (the "answer")
-      socket.on("call-accepted", (signal) => {
-        setCallAccepted(true);
-        peer.signal(signal);
+        if (userVideo.current) userVideo.current.srcObject = remoteStream;
       });
 
       connectionRef.current = peer;
@@ -155,32 +131,21 @@ function Chat() {
 
     navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then((stream) => {
       setStream(stream);
-      if (myVideo.current) {
-        myVideo.current.srcObject = stream;
-      }
+      if (myVideo.current) myVideo.current.srcObject = stream;
 
-      // Create a peer connection, but NOT as the initiator
-      const peer = new Peer({
-        initiator: false,
-        trickle: false,
-        stream: stream,
-      });
+      const peer = new Peer({ initiator: false, trickle: false, stream: stream });
 
-      // When this peer generates its signal (the "answer"), send it back to the caller
       peer.on("signal", (data) => {
+        // Here, `caller` is the UID of the person who called us.
+        // The server will use this UID to find their socket ID.
         socket.emit("answer-call", { signal: data, to: caller });
       });
 
-      // When the caller's stream is received, display it
       peer.on("stream", (remoteStream) => {
-        if (userVideo.current) {
-          userVideo.current.srcObject = remoteStream;
-        }
+        if (userVideo.current) userVideo.current.srcObject = remoteStream;
       });
 
-      // Signal the caller's initial offer to complete the connection
       peer.signal(callerSignal);
-
       connectionRef.current = peer;
     });
   };
@@ -188,72 +153,57 @@ function Chat() {
   const leaveCall = () => {
     setCallEnded(true);
     if (connectionRef.current) {
-      // Find the user we were talking to
-      const otherUser = messages.find(m => m.uid !== user.uid);
-      const toId = caller || (otherUser ? otherUser.uid : null);
-      if (toId) {
-        socket.emit("end-call", { to: toId });
+      const otherUserId = getOtherUserId();
+      // We need to tell the other user that the call has ended.
+      // `caller` state holds the UID of the person who called us, if we answered.
+      // `otherUserId` is a good fallback to find the other person in the room.
+      const idToNotify = caller || otherUserId; 
+      if (idToNotify) {
+        socket.emit("end-call", { to: idToNotify });
       }
       connectionRef.current.destroy();
     }
-    // Stop camera and microphone tracks
     if (stream) {
       stream.getTracks().forEach(track => track.stop());
     }
-    // Reloading is a simple way to reset state
     window.location.reload();
   };
 
   const declineCall = () => {
     setReceivingCall(false);
-    // Optionally, you could emit an event to notify the caller that the call was rejected
-    // For now, we just close the dialog on the receiver's end.
-  }
+  };
 
-  // Find the other user in the chat to call them (best for 1-on-1 chats)
-const getOtherUserId = () => {
+  const getOtherUserId = () => {
     if (!user || !user.uid || !roomMembers) return null;
-    
-    // Find the member in the room's member list that is NOT the current user.
-    // This is reliable and works even if no messages have been sent.
     return roomMembers.find(memberId => memberId !== user.uid);
   };
-  // (All your existing functions like sendAudio, sendMessage, etc. remain here unchanged)
+  
   const sendAudio = async (blob) => { if (!blob) return; const formData = new FormData(); formData.append("audio", blob, "voice-message.webm"); formData.append("name", user.displayName); formData.append("timestamp", new Date().toISOString()); formData.append("uid", user.uid); formData.append("roomId", roomId); formData.append("messageType", "audio"); try { await axiosInstance.post(`messages/new/audio`, formData, { headers: { "Content-Type": "multipart/form-data" }, }); } catch (error) { console.error("Error uploading audio:", error); alert("Failed to send voice message. Please try again."); } };
   const { status, startRecording, stopRecording } = useReactMediaRecorder({ audio: true, onStop: (blobUrl, blob) => sendAudio(blob), });
   const scrollToBottom = () => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); };
   useEffect(scrollToBottom, [messages, searchQuery]);
   useEffect(() => { if (roomId) { axiosInstance.get(`room/${roomId}`).then((res) => { setRoomName(res.data?.data?.name); setUpdatedAt(res.data?.data?.updatedAt); setRoomAvatar(res.data?.data?.avatar);setRoomMembers(res.data?.data?.members || []) }); setShowSearch(false); setSearchQuery(""); setShowAttachmentMenu(false); setShowEmojiPicker(false); setShowMoreMenu(false); setMessageToDeleteId(null); setIsClearChatDialogOpen(false); } }, [roomId]);
   useEffect(() => { if (!roomId) return; const fetchMessages = () => { axiosInstance.get(`messages/${roomId}`).then((res) => { const fetchedMessages = Array.isArray(res.data?.message) ? res.data.message : []; setMessages(currentMessages => JSON.stringify(fetchedMessages) !== JSON.stringify(currentMessages) ? fetchedMessages : currentMessages); }).catch(err => console.error("Polling for messages failed:", err)); }; const fetchMusicState = () => { axiosInstance.get(`/room/${roomId}/music-state`).then(res => { const newState = { url: res.data.currentSongUrl, title: res.data.currentSongTitle, isPlaying: res.data.isPlaying, }; setCurrentSong(oldState => JSON.stringify(newState) !== JSON.stringify(oldState) ? newState : oldState); }).catch(err => console.error("Polling for music state failed:", err)); }; fetchMessages(); fetchMusicState(); const messageInterval = setInterval(fetchMessages, 3000); const musicPollInterval = setInterval(fetchMusicState, 3000); return () => { clearInterval(messageInterval); clearInterval(musicPollInterval); }; }, [roomId]);
-  useEffect(() => { const audio = audioRef.current; if (!audio) return; if (currentSong.isPlaying && currentSong.url) { if (audio.src !== currentSong.url) { audio.src = currentSong.url; } audio.play().catch(e => console.error("Audio play failed. User interaction might be required.", e)); } else { audio.pause(); } if (!currentSong.url) { audio.src = ""; } }, [currentSong]);
+  useEffect(() => { const audio = audioRef.current; if (!audio) return; if (currentSong.isPlaying && currentSong.url) { if (audio.src !== currentSong.url) { audio.src = currentSong.url; } audio.play().catch(e => console.error("Audio play failed.", e)); } else { audio.pause(); } if (!currentSong.url) { audio.src = ""; } }, [currentSong]);
   const handleMusicEvent = async (eventType, eventData = {}) => { if (!roomId) return; try { await axiosInstance.post(`/room/${roomId}/music-event`, { eventType, eventData }); } catch (error) { console.error(`Error sending music event '${eventType}':`, error); } };
-  const handleSelectSong = (song) => { if (!song || !song.preview_url) { console.error("Selected song has no preview URL."); alert("Sorry, a preview is not available for this song."); return; } const artistNames = song.artists.map(artist => artist.name).join(', '); const songData = { url: song.preview_url, title: `${song.name} - ${artistNames}`, }; setCurrentSong({ ...songData, isPlaying: true }); handleMusicEvent('play-song', songData); };
+  const handleSelectSong = (song) => { if (!song || !song.preview_url) { alert("Sorry, a preview is not available for this song."); return; } const artistNames = song.artists.map(a => a.name).join(', '); const songData = { url: song.preview_url, title: `${song.name} - ${artistNames}` }; setCurrentSong({ ...songData, isPlaying: true }); handleMusicEvent('play-song', songData); };
   const pauseSharedSong = () => { setCurrentSong(prev => ({ ...prev, isPlaying: false })); handleMusicEvent('pause-song'); };
   const resumeSharedSong = () => { if (currentSong.url) { setCurrentSong(prev => ({ ...prev, isPlaying: true })); handleMusicEvent('play-song', { url: currentSong.url, title: currentSong.title }); } }
   const stopSharedSong = () => { setCurrentSong({ url: null, title: null, isPlaying: false }); handleMusicEvent('stop-song'); };
   const sendMessage = async (e) => { e.preventDefault(); if (!input.trim() || status === "recording") return; setShowEmojiPicker(false); const messageToSend = input; setInput(""); await axiosInstance.post(`messages/new`, { message: messageToSend, name: user.displayName, timestamp: new Date().toISOString(), uid: user.uid, roomId: roomId, }); };
   const handleFileSelection = () => { setShowAttachmentMenu(false); fileInputRef.current.click(); };
-  const handleFileUpload = async (e) => { const file = e.target.files[0]; if (!file) return; let messageType = "document"; if (file.type.startsWith("image/")) messageType = "image"; else if (file.type.startsWith("video/")) messageType = "video"; const formData = new FormData(); formData.append("file", file, file.name); formData.append("name", user.displayName); formData.append("timestamp", new Date().toISOString()); formData.append("uid", user.uid); formData.append("roomId", roomId); formData.append("messageType", messageType); try { await axiosInstance.post(`messages/new/file`, formData, { headers: { "Content-Type": "multipart/form-data" }, }); } catch (error) { console.error("Error uploading file:", error); alert("Error uploading file. Please try again."); } e.target.value = null; };
-  const sendLocation = () => { setShowAttachmentMenu(false); if (!navigator.geolocation) return alert("Geolocation is not supported by your browser."); navigator.geolocation.getCurrentPosition(async (position) => { const { latitude, longitude } = position.coords; try { await axiosInstance.post(`messages/new`, { name: user.displayName, timestamp: new Date().toISOString(), uid: user.uid, roomId: roomId, messageType: "location", location: { lat: latitude, lon: longitude }, }); } catch (error) { console.error("Error sending location:", error); alert("Failed to send your location."); } }, () => alert("Unable to retrieve your location.")); };
+  const handleFileUpload = async (e) => { const file = e.target.files[0]; if (!file) return; let messageType = "document"; if (file.type.startsWith("image/")) messageType = "image"; else if (file.type.startsWith("video/")) messageType = "video"; const formData = new FormData(); formData.append("file", file, file.name); formData.append("name", user.displayName); formData.append("timestamp", new Date().toISOString()); formData.append("uid", user.uid); formData.append("roomId", roomId); formData.append("messageType", messageType); try { await axiosInstance.post(`messages/new/file`, formData, { headers: { "Content-Type": "multipart/form-data" }, }); } catch (error) { console.error("Error uploading file:", error); alert("Error uploading file."); } e.target.value = null; };
+  const sendLocation = () => { setShowAttachmentMenu(false); if (!navigator.geolocation) return alert("Geolocation is not supported."); navigator.geolocation.getCurrentPosition(async (position) => { const { latitude, longitude } = position.coords; try { await axiosInstance.post(`messages/new`, { name: user.displayName, timestamp: new Date().toISOString(), uid: user.uid, roomId: roomId, messageType: "location", location: { lat: latitude, lon: longitude }, }); } catch (error) { console.error("Error sending location:", error); alert("Failed to send your location."); } }, () => alert("Unable to retrieve your location.")); };
   const handleOpenClearDialog = () => { setShowMoreMenu(false); setIsClearChatDialogOpen(true); };
   const handleCloseClearDialog = () => { setIsClearChatDialogOpen(false); };
   const handleConfirmClearChat = async () => { try { await axiosInstance.delete(`messages/clear/${roomId}`); setMessages([]); } catch (error) { console.error("Error clearing chat:", error); alert("Failed to clear the chat."); } finally { handleCloseClearDialog(); } };
   const handleDeleteMessage = async (msgId) => { try { await axiosInstance.delete(`messages/delete/${msgId}`); setMessages((prev) => prev.filter((message) => message._id !== msgId)); setMessageToDeleteId(null); } catch (error) { console.error("Error deleting message:", error); alert("Failed to delete the message."); } };
-  const formatTimestamp = (isoDate) => { if (!isoDate) return ""; return new Date(isoDate).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true, }); };
-  const formatDate = (isoDate) => { if (!isoDate) return ""; const date = new Date(isoDate); const day = String(date.getDate()).padStart(2, '0'); const month = String(date.getMonth() + 1).padStart(2, '0'); const year = date.getFullYear(); return `${day}/${month}/${year}`; };
-  const filteredMessages = messages.filter((msg) => { if (!searchQuery) return true; const query = searchQuery.toLowerCase(); return ((msg.message?.toLowerCase() || "").includes(query) || (msg.fileName?.toLowerCase() || "").includes(query)); });
+  const formatTimestamp = (isoDate) => !isoDate ? "" : new Date(isoDate).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true, });
+  const formatDate = (isoDate) => { if (!isoDate) return ""; const d = new Date(isoDate); return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`; };
+  const filteredMessages = messages.filter((msg) => (!searchQuery ? true : (msg.message?.toLowerCase() || "").includes(searchQuery.toLowerCase()) || (msg.fileName?.toLowerCase() || "").includes(searchQuery.toLowerCase())));
   const renderMessageContent = (message) => { switch (message.messageType) { case "audio": return <audio src={message.audioUrl} controls className="chat__audioPlayer" />; case "image": return (<div className="chat__mediaContainer"><img src={message.fileUrl} alt={message.fileName || "Sent image"} className="chat__mediaImage" />{message.message && <p className="chat__mediaCaption">{message.message}</p>}</div>); case "video": return (<div className="chat__mediaContainer"><video src={message.fileUrl} controls className="chat__mediaVideo" />{message.message && <p className="chat__mediaCaption">{message.message}</p>}</div>); case "document": return (<a href={message.fileUrl} target="_blank" rel="noopener noreferrer" className="chat__documentLink"><div className="chat__documentIcon"><Description /></div><div className="chat__documentInfo"><span>{message.fileName}</span><small>Document</small></div></a>); case "location": return message.location ? (<a href={`https://www.google.com/maps?q=${message.location.lat},${message.location.lon}`} target="_blank" rel="noopener noreferrer" className="chat__locationLink"><div className="chat__locationIcon"><LocationOn /></div><div className="chat__locationInfo"><span>Shared Location</span><small>View on Google Maps</small></div></a>) : (<div className="chat__text">Invalid location data</div>); default: return <div className="chat__text">{message.message}</div>; } };
-  // ... End of your existing functions
-
-  if (!roomId) {
-    return (
-      <div className="chat chat__welcome">
-        <img src={WelcomeLogo} alt="Welcome to Pookie Gram" />
-        <h1>POOKIE-GRAM</h1>
-        <p>Select a chat to start messaging with your favorite pookies.</p>
-      </div>
-    );
-  }
+  
+  if (!roomId) return ( <div className="chat chat__welcome"><img src={WelcomeLogo} alt="Welcome to Pookie Gram" /><h1>POOKIE-GRAM</h1><p>Select a chat to start messaging with your favorite pookies.</p></div> );
 
   return (
     <div className="chat">
@@ -288,7 +238,6 @@ const getOtherUserId = () => {
         </div>
       )}
 
-      {/* --- REGULAR CHAT UI --- */}
       <audio ref={audioRef} style={{ display: "none" }} onEnded={stopSharedSong} />
       <div className="chat__header">
         <Avatar src={roomAvatar} />
@@ -301,7 +250,7 @@ const getOtherUserId = () => {
         ) : (
           <div className="chat__headerInfo">
             <h3>{roomName}</h3>
-            <p>{updatedAt ? `Created on ${formatDate(updatedAt)}` : "..."}</p>
+            <p>{updatedAt ? `Last active on ${formatDate(updatedAt)}` : "..."}</p>
           </div>
         )}
         <div className="chat__headerRight">
@@ -310,27 +259,18 @@ const getOtherUserId = () => {
             if (otherUserId) {
               callUser(otherUserId);
             } else {
-              alert("Cannot start a call. Make sure you are in a 1-on-1 chat.");
+              alert("Cannot start a call. This feature is for 1-on-1 chats and requires at least two members in the room.");
             }
           }}>
             <Videocam />
           </IconButton>
-
           {!showSearch && <IconButton onClick={() => setShowSearch(true)}><SearchOutlined /></IconButton>}
           <IconButton onClick={() => setIsMusicModalOpen(true)}><MusicNote /></IconButton>
-          <div className="chat__attachment">
-            <IconButton onClick={() => setShowAttachmentMenu((p) => !p)}><AttachFile /></IconButton>
-            <AnimatePresence>{showAttachmentMenu && (<motion.div className="chat__menu" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}><div onClick={handleFileSelection}><Photo />Photos & Videos</div><div onClick={handleFileSelection}><Description />Document</div><div onClick={sendLocation}><LocationOn />Location</div></motion.div>)}</AnimatePresence>
-          </div>
-          <div className="chat__more">
-            <IconButton onClick={() => setShowMoreMenu((p) => !p)}><MoreVert /></IconButton>
-            <AnimatePresence>{showMoreMenu && (<motion.div className="chat__menu" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}><div onClick={handleOpenClearDialog}><DeleteForever />Clear all chat</div></motion.div>)}</AnimatePresence>
-          </div>
+          <div className="chat__attachment"><IconButton onClick={() => setShowAttachmentMenu((p) => !p)}><AttachFile /></IconButton><AnimatePresence>{showAttachmentMenu && (<motion.div className="chat__menu" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}><div onClick={handleFileSelection}><Photo />Photos & Videos</div><div onClick={handleFileSelection}><Description />Document</div><div onClick={sendLocation}><LocationOn />Location</div></motion.div>)}</AnimatePresence></div>
+          <div className="chat__more"><IconButton onClick={() => setShowMoreMenu((p) => !p)}><MoreVert /></IconButton><AnimatePresence>{showMoreMenu && (<motion.div className="chat__menu" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}><div onClick={handleOpenClearDialog}><DeleteForever />Clear all chat</div></motion.div>)}</AnimatePresence></div>
         </div>
       </div>
-
       <input type="file" ref={fileInputRef} style={{ display: "none" }} onChange={handleFileUpload} accept="image/*,video/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx" />
-
       <div className="chat__body" onClick={() => { setShowAttachmentMenu(false); setShowEmojiPicker(false); setShowMoreMenu(false); setMessageToDeleteId(null); }}>
         <AnimatePresence>
           {filteredMessages.map((message) => (
@@ -343,22 +283,13 @@ const getOtherUserId = () => {
         </AnimatePresence>
         <div ref={messagesEndRef} />
       </div>
-
       <AnimatePresence>{currentSong.url && (<motion.div className="chat__musicPlayer" initial={{ y: 60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 60, opacity: 0 }} transition={{ type: "spring", stiffness: 300, damping: 30 }}><div className="chat__musicPlayer_info"><MusicNote fontSize="small" /><span title={currentSong.title}>{currentSong.title}</span></div><div className="chat__musicPlayer_controls">{currentSong.isPlaying ? (<IconButton onClick={pauseSharedSong} title="Pause"><Pause /></IconButton>) : (<IconButton onClick={resumeSharedSong} title="Play"><PlayArrow /></IconButton>)}<IconButton onClick={stopSharedSong} title="Stop"><Stop /></IconButton></div></motion.div>)}</AnimatePresence>
-
       <div className="chat__footer">
-        <div className="chat__emoji">
-          <IconButton onClick={() => setShowEmojiPicker((p) => !p)}><InsertEmoticon /></IconButton>
-          {showEmojiPicker && (<div className="chat__emojiPickerContainer"><Picker onEmojiClick={(e) => setInput((prev) => prev + e.emoji)} theme="dark" /></div>)}
-        </div>
-        <form onSubmit={sendMessage}>
-          <input type="text" placeholder={status === "recording" ? "Recording voice message..." : "Type a message"} value={input} onChange={(e) => setInput(e.target.value)} onFocus={() => { setShowEmojiPicker(false); setShowAttachmentMenu(false); setShowMoreMenu(false); setMessageToDeleteId(null); }} disabled={status === "recording"} />
-        </form>
+        <div className="chat__emoji"><IconButton onClick={() => setShowEmojiPicker((p) => !p)}><InsertEmoticon /></IconButton>{showEmojiPicker && (<div className="chat__emojiPickerContainer"><Picker onEmojiClick={(e) => setInput((prev) => prev + e.emoji)} theme="dark" /></div>)}</div>
+        <form onSubmit={sendMessage}><input type="text" placeholder={status === "recording" ? "Recording voice message..." : "Type a message"} value={input} onChange={(e) => setInput(e.target.value)} onFocus={() => { setShowEmojiPicker(false); setShowAttachmentMenu(false); setShowMoreMenu(false); setMessageToDeleteId(null); }} disabled={status === "recording"} /></form>
         {input ? (<IconButton type="submit" onClick={sendMessage} className="chat__sendButton"><Send /></IconButton>) : (<IconButton onClick={status === "recording" ? stopRecording : startRecording}>{status === "recording" ? <StopCircle className="chat__mic_recording" /> : <Mic />}</IconButton>)}
       </div>
-
       <MusicSearchModal open={isMusicModalOpen} onClose={() => setIsMusicModalOpen(false)} onSongSelect={handleSelectSong} />
-
       <Dialog open={isClearChatDialogOpen} onClose={handleCloseClearDialog} sx={dialogSx}>
         <DialogTitle>{"Clear all messages in this chat?"}</DialogTitle>
         <DialogContent><DialogContentText sx={{ color: "#c0c0c0" }}>Are you sure you want to permanently delete all messages in "{roomName}"? This action cannot be undone.</DialogContentText></DialogContent>

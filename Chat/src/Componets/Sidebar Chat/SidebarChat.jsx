@@ -1,3 +1,5 @@
+// SidebarChat.js
+
 import React, { useState } from "react";
 import "./SidebarChat.css";
 import Avatar from "@mui/material/Avatar";
@@ -43,7 +45,8 @@ const textFieldSx = {
   },
 };
 
-function SidebarChat({ addNewChat, name, id, avatar, onDelete, onAddChat }) {
+// MODIFIED: Accept the new 'creatorId' prop
+function SidebarChat({ addNewChat, name, id, avatar, onDelete, onAddChat, creatorId }) {
   const [isHovered, setIsHovered] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [isAddChatDialogOpen, setIsAddChatDialogOpen] = useState(false);
@@ -51,10 +54,22 @@ function SidebarChat({ addNewChat, name, id, avatar, onDelete, onAddChat }) {
   const [newRoomAvatar, setNewRoomAvatar] = useState("");
 
   const handleCreateChatConfirm = async () => {
-    if (!newRoomName.trim()) return;
+    // ADDED: A check to ensure creatorId exists before making the API call
+    if (!newRoomName.trim() || !creatorId) {
+      alert("Cannot create chat. Missing information.");
+      return;
+    }
     try {
-      const response = await axiosInstance.post("group/create", { name: newRoomName, avatar: newRoomAvatar });
-      if (response.data && response.data.data) onAddChat(response.data.data);
+      // MODIFIED: Include creatorId in the request body
+      const response = await axiosInstance.post("group/create", { 
+        name: newRoomName, 
+        avatar: newRoomAvatar,
+        creatorId: creatorId 
+      });
+
+      if (response.data && response.data.data) {
+        onAddChat(response.data.data);
+      }
     } catch (error) {
       console.log("Error creating chat room:", error);
       alert("Failed to create chat. Please try again.");

@@ -1,3 +1,4 @@
+// SideBar.js
 
 import React, { useEffect, useState } from "react";
 import Avatar from "@mui/material/Avatar";
@@ -30,7 +31,7 @@ function SideBar() {
   }, []);
 
   const handleAddRoom = (newRoom) => {
-    setRooms((prevRooms) => [...prevRooms, newRoom]);
+    setRooms((prevRooms) => [newRoom, ...prevRooms]); // Add new room to the top
   };
 
   const handleDeleteRoom = (deletedRoomId) => {
@@ -77,7 +78,12 @@ function SideBar() {
       </div>
 
       <div className="sidebar__chats">
-        <SidebarChat addNewChat onAddChat={handleAddRoom} />
+        {/* MODIFIED: Pass the creator's ID (user.uid) as a prop */}
+        <SidebarChat 
+          addNewChat 
+          onAddChat={handleAddRoom}
+          creatorId={user?.uid} 
+        />
         {filteredRooms.map((room) => (
           <SidebarChat
             key={room._id}

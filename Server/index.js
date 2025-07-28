@@ -1,3 +1,5 @@
+// server.js
+
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -6,30 +8,25 @@ const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 const { Readable } = require('stream');
 const axios = require('axios');
-const http = require('http'); // Import http
-const { Server } = require("socket.io"); // Import Server from socket.io
+const http = require('http');
+const { Server } = require("socket.io");
 
-// Import Mongoose Models
-const Rooms = require('./DbRooms'); 
+const Rooms = require('./DbRooms'); // Make sure this path points to your updated DbRooms.js
 const Message = require('./dbmsg');
 
 const app = express();
-// Create an HTTP server from the Express app to attach Socket.IO
-const server = http.createServer(app); 
+const server = http.createServer(app);
 
-// --- Socket.IO Setup ---
 const io = new Server(server, {
     cors: {
-        origin: "*", // IMPORTANT: In production, restrict this to your frontend's URL (e.g., "http://localhost:3000")
+        origin: "*",
         methods: ["GET", "POST"]
     }
 });
 
-// --- Middlewares ---
 app.use(cors());
 app.use(bodyParser.json());
 
-// --- Cloudinary Configuration ---
 cloudinary.config({
   cloud_name: 'dpwx76ub2',
   api_key: '651975388482573',
@@ -37,11 +34,9 @@ cloudinary.config({
   secure: true
 });
 
-// --- Multer Configuration ---
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
-// --- Database Connection ---
 const dbUrl = "mongodb+srv://santhoshrajan817:Santhosh007@whatsapp.vb52t.mongodb.net/whatsapp";
 mongoose.connect(dbUrl);
 const db = mongoose.connection;
@@ -49,22 +44,29 @@ db.once("open", () => {
     console.log("DB connected");
 });
 
-
-
 app.get("/", (req, res) => {
     res.send("Hello from the PookieGram API Server!");
 });
 
+// MODIFIED: The "create group" endpoint now accepts a creator's ID
 app.post("/group/create", (req, res) => {
-const { name, avatar } = req.body;
-if (!name) return res.status(400).json({ message: "Room name is required" });
-let room = new Rooms({ name, avatar });
-room.save()
-.then((result) => res.status(201).json({ data: result }))
-.catch((err) => res.status(500).json({ message: "Error creating room" }));
+    // ADDED: Get the creator's ID from the request body
+    const { name, avatar, creatorId } = req.body;
+    
+    if (!name) return res.status(400).json({ message: "Room name is required" });
+    if (!creatorId) return res.status(400).json({ message: "Creator ID is required" });
+
+    // ADDED: Initialize the room with the creator as the first member
+    let room = new Rooms({ name, avatar, members: [creatorId] });
+
+    room.save()
+        .then((result) => res.status(201).json({ data: result }))
+        .catch((err) => res.status(500).json({ message: "Error creating room" }));
 });
+
 app.get("/all/rooms", (req, res) => {
-    Rooms.find().sort({ updatedAt: -1 }) 
+    // The `timestamps: true` in the schema handles the `updatedAt` field automatically
+    Rooms.find().sort({ updatedAt: -1 })
         .then((rooms) => res.status(200).json({ data: rooms }))
         .catch((err) => res.status(500).send("Internal Server Error"));
 });
@@ -98,14 +100,25 @@ app.get("/messages/:id", (req, res) => {
         .catch((err) => res.status(500).send("Error fetching messages"));
 });
 
+// MODIFIED: The "new message" endpoint now adds the user to the room's member list
 app.post("/messages/new", (req, res) => {
     const dbMessage = new Message(req.body);
+    const { roomId, uid } = req.body; // Get roomId and user's uid
+
     dbMessage.save()
         .then(async (result) => {
-            await Rooms.findByIdAndUpdate(req.body.roomId, { updatedAt: new Date() });
+            // ADDED: Use $addToSet to add the user's UID to the members array.
+            // This ensures the UID is only added if it's not already present.
+            // We also update the `updatedAt` timestamp to keep the room sorting correct.
+            await Rooms.findByIdAndUpdate(roomId, { 
+                $addToSet: { members: uid }
+            });
             res.status(201).json({ data: result });
         })
-        .catch((err) => res.status(500).send("Error saving message"));
+        .catch((err) => {
+            console.error("Error saving message or updating room:", err);
+            res.status(500).send("Error saving message");
+        });
 });
 
 app.delete("/messages/clear/:roomId", (req, res) => {
@@ -123,9 +136,12 @@ app.delete("/messages/delete/:messageId", (req, res) => {
         .catch(err => res.status(500).send("Error deleting message."));
 });
 
+// MODIFIED: The file upload handler also needs to add the user to the room members
 const handleFileUpload = (req, res, resourceType, messageDataField) => {
     if (!req.file) return res.status(400).send(`No ${messageDataField} file uploaded.`);
     
+    const { roomId, uid } = req.body; // Get roomId and uid
+
     const readableStream = new Readable();
     readableStream.push(req.file.buffer);
     readableStream.push(null);
@@ -153,7 +169,10 @@ const handleFileUpload = (req, res, resourceType, messageDataField) => {
         const dbMessage = new Message(messageBody);
         try {
             const savedMessage = await dbMessage.save();
-            await Rooms.findByIdAndUpdate(req.body.roomId, { updatedAt: new Date() });
+            // ADDED: Also add the user to members on file/audio upload
+            await Rooms.findByIdAndUpdate(roomId, { 
+                $addToSet: { members: uid }
+            });
             res.status(201).json(savedMessage);
         } catch (dbError) {
             res.status(500).send("DB Error saving message");
@@ -163,6 +182,7 @@ const handleFileUpload = (req, res, resourceType, messageDataField) => {
     readableStream.pipe(uploadStream);
 };
 
+// These routes will now implicitly use the modified handleFileUpload
 app.post("/messages/new/audio", upload.single('audio'), (req, res) => {
     handleFileUpload(req, res, 'video', 'audioUrl');
 });
@@ -171,6 +191,8 @@ app.post("/messages/new/file", upload.single('file'), (req, res) => {
     handleFileUpload(req, res, 'auto', 'fileUrl');
 });
 
+// --- (The rest of your server.js code remains the same) ---
+// ... music routes, socket.io logic, etc. ...
 app.post("/room/:roomId/music-event", async (req, res) => {
   const { roomId } = req.params;
   const { eventType, eventData } = req.body;
@@ -243,22 +265,18 @@ app.get("/api/music/search", async (req, res) => {
     } catch (error) { res.status(500).json({ message: "An internal error occurred while searching for music." }); }
 });
 
-// ================== REAL-TIME VIDEO CALL SIGNALING (NEW) ================== //
 
-const userSocketMap = {}; // Maps userId to a unique socketId
+const userSocketMap = {}; 
 
 io.on("connection", (socket) => {
     console.log(`User connected: ${socket.id}`);
 
-    // When a user logs in, they should emit this event with their unique user ID
     socket.on("register-user", (userId) => {
         userSocketMap[userId] = socket.id;
         console.log(`User Registered: ${userId} -> ${socket.id}`);
-        // Optional: Let other users know who is online
         io.emit("online-users", Object.keys(userSocketMap));
     });
 
-    // A user initiates a call to another user
     socket.on("call-user", ({ userToCall, signalData, from, name }) => {
         const toSocketId = userSocketMap[userToCall];
         if (toSocketId) {
@@ -269,13 +287,11 @@ io.on("connection", (socket) => {
         }
     });
 
-    // A user answers a call
     socket.on("answer-call", (data) => {
         console.log("Call answered, forwarding signal back to caller.");
         io.to(data.to).emit("call-accepted", data.signal);
     });
 
-    // A user ends a call
     socket.on("end-call", ({ to }) => {
         console.log(`Forwarding end-call signal to socket ${to}`);
         io.to(to).emit("call-ended");
@@ -283,7 +299,6 @@ io.on("connection", (socket) => {
 
     socket.on("disconnect", () => {
         console.log(`User disconnected: ${socket.id}`);
-        // Clean up the user from the map
         for (const userId in userSocketMap) {
             if (userSocketMap[userId] === socket.id) {
                 delete userSocketMap[userId];
@@ -296,10 +311,8 @@ io.on("connection", (socket) => {
 });
 
 
-// ================== SERVER START ================== //
 
 const PORT = process.env.PORT || 5000;
-// Use the 'server' instance (with socket.io) to listen, not the original 'app'
 server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });

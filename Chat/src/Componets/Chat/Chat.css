@@ -503,9 +503,95 @@
 }
 
 .chat__answerButton {
-  background-color: #3cb44b !important; /* green */
+  background-color: #3cb44b !important; 
   color: white !important;
   animation: pulse-animation 1.5s infinite;
 }
 
-/* (The rest of your CSS file remains the same) */
+.chat__videoContainer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #111b21; 
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+}
+
+.chat__userVideo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; 
+}
+
+.chat__myVideo {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  width: 25%;
+  max-width: 250px;
+  border-radius: 10px;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+}
+
+/* Controls like the hang-up button */
+.chat__callControls {
+  position: absolute;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 20px;
+}
+
+.chat__hangUpButton {
+  background-color: #e61919 !important; 
+  color: white !important;
+  padding: 15px !important;
+}
+
+.chat__hangUpButton:hover {
+  background-color: #c41414 !important;
+}
+
+.chat__incomingCall {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 101; /* Above the video container */
+  background: rgba(30, 30, 45, 0.8);
+  backdrop-filter: blur(15px);
+  padding: 15px 25px;
+  border-radius: 15px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #f1f1f1;
+}
+
+.chat__incomingCallInfo p {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.chat__incomingCallActions {
+  display: flex;
+  gap: 10px;
+}
+
+.chat__declineButton {
+  background-color: #e61919 !important;
+  color: white !important;
+}
+
+.chat__answerButton {
+  background-color: #25d366 !important;
+  color: white !important;
+}

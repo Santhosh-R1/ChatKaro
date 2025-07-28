@@ -11,7 +11,7 @@ const axios = require('axios');
 const http = require('http');
 const { Server } = require("socket.io");
 
-const Rooms = require('./DbRooms'); // Make sure this path points to your updated DbRooms.js
+const Rooms = require('./DbRooms');
 const Message = require('./dbmsg');
 
 const app = express();
@@ -48,15 +48,12 @@ app.get("/", (req, res) => {
     res.send("Hello from the PookieGram API Server!");
 });
 
-// MODIFIED: The "create group" endpoint now accepts a creator's ID
 app.post("/group/create", (req, res) => {
-    // ADDED: Get the creator's ID from the request body
     const { name, avatar, creatorId } = req.body;
     
     if (!name) return res.status(400).json({ message: "Room name is required" });
     if (!creatorId) return res.status(400).json({ message: "Creator ID is required" });
 
-    // ADDED: Initialize the room with the creator as the first member
     let room = new Rooms({ name, avatar, members: [creatorId] });
 
     room.save()
@@ -65,7 +62,6 @@ app.post("/group/create", (req, res) => {
 });
 
 app.get("/all/rooms", (req, res) => {
-    // The `timestamps: true` in the schema handles the `updatedAt` field automatically
     Rooms.find().sort({ updatedAt: -1 })
         .then((rooms) => res.status(200).json({ data: rooms }))
         .catch((err) => res.status(500).send("Internal Server Error"));
@@ -100,16 +96,12 @@ app.get("/messages/:id", (req, res) => {
         .catch((err) => res.status(500).send("Error fetching messages"));
 });
 
-// MODIFIED: The "new message" endpoint now adds the user to the room's member list
 app.post("/messages/new", (req, res) => {
     const dbMessage = new Message(req.body);
-    const { roomId, uid } = req.body; // Get roomId and user's uid
+    const { roomId, uid } = req.body;
 
     dbMessage.save()
         .then(async (result) => {
-            // ADDED: Use $addToSet to add the user's UID to the members array.
-            // This ensures the UID is only added if it's not already present.
-            // We also update the `updatedAt` timestamp to keep the room sorting correct.
             await Rooms.findByIdAndUpdate(roomId, { 
                 $addToSet: { members: uid }
             });
@@ -136,11 +128,10 @@ app.delete("/messages/delete/:messageId", (req, res) => {
         .catch(err => res.status(500).send("Error deleting message."));
 });
 
-// MODIFIED: The file upload handler also needs to add the user to the room members
 const handleFileUpload = (req, res, resourceType, messageDataField) => {
     if (!req.file) return res.status(400).send(`No ${messageDataField} file uploaded.`);
     
-    const { roomId, uid } = req.body; // Get roomId and uid
+    const { roomId, uid } = req.body;
 
     const readableStream = new Readable();
     readableStream.push(req.file.buffer);
@@ -169,7 +160,6 @@ const handleFileUpload = (req, res, resourceType, messageDataField) => {
         const dbMessage = new Message(messageBody);
         try {
             const savedMessage = await dbMessage.save();
-            // ADDED: Also add the user to members on file/audio upload
             await Rooms.findByIdAndUpdate(roomId, { 
                 $addToSet: { members: uid }
             });
@@ -182,7 +172,6 @@ const handleFileUpload = (req, res, resourceType, messageDataField) => {
     readableStream.pipe(uploadStream);
 };
 
-// These routes will now implicitly use the modified handleFileUpload
 app.post("/messages/new/audio", upload.single('audio'), (req, res) => {
     handleFileUpload(req, res, 'video', 'audioUrl');
 });
@@ -191,8 +180,6 @@ app.post("/messages/new/file", upload.single('file'), (req, res) => {
     handleFileUpload(req, res, 'auto', 'fileUrl');
 });
 
-// --- (The rest of your server.js code remains the same) ---
-// ... music routes, socket.io logic, etc. ...
 app.post("/room/:roomId/music-event", async (req, res) => {
   const { roomId } = req.params;
   const { eventType, eventData } = req.body;
@@ -266,6 +253,7 @@ app.get("/api/music/search", async (req, res) => {
 });
 
 
+
 const userSocketMap = {}; 
 
 io.on("connection", (socket) => {
@@ -280,7 +268,7 @@ io.on("connection", (socket) => {
     socket.on("call-user", ({ userToCall, signalData, from, name }) => {
         const toSocketId = userSocketMap[userToCall];
         if (toSocketId) {
-            console.log(`Forwarding call from ${name} to user ${userToCall}`);
+            console.log(`Forwarding call from ${name} (UID: ${from}) to user ${userToCall} (Socket: ${toSocketId})`);
             io.to(toSocketId).emit("hey-im-calling", { signal: signalData, from, name });
         } else {
             console.log(`Call failed: User ${userToCall} is not online or not registered.`);
@@ -288,13 +276,21 @@ io.on("connection", (socket) => {
     });
 
     socket.on("answer-call", (data) => {
-        console.log("Call answered, forwarding signal back to caller.");
-        io.to(data.to).emit("call-accepted", data.signal);
+        const toSocketId = userSocketMap[data.to];
+        if (toSocketId) {
+            console.log(`Call answered. Forwarding signal from answering user back to original caller (Socket: ${toSocketId})`);
+            io.to(toSocketId).emit("call-accepted", data.signal);
+        } else {
+            console.log(`Answer failed: Original caller (UID: ${data.to}) is no longer online.`);
+        }
     });
 
     socket.on("end-call", ({ to }) => {
-        console.log(`Forwarding end-call signal to socket ${to}`);
-        io.to(to).emit("call-ended");
+        const toSocketId = userSocketMap[to];
+        if (toSocketId) {
+            console.log(`Forwarding end-call signal to user (Socket: ${toSocketId})`);
+            io.to(toSocketId).emit("call-ended");
+        }
     });
 
     socket.on("disconnect", () => {
@@ -309,8 +305,6 @@ io.on("connection", (socket) => {
         io.emit("online-users", Object.keys(userSocketMap));
     });
 });
-
-
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {

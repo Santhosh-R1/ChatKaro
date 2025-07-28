@@ -1,4 +1,3 @@
-// Chat.jsx
 
 import React, { useEffect, useState, useRef } from "react";
 import "./Chat.css";
@@ -18,11 +17,9 @@ import DialogTitle from '@mui/material/DialogTitle';
 import Button from '@mui/material/Button';
 import axiosInstance from "../../../BaseUrl";
 import MusicSearchModal from "./MusicSearchModal";
-// --- NEW IMPORTS FOR VIDEO CALL ---
-import Peer from "simple-peer/simplepeer.min.js"; // <--- THIS IS THE FIX
+import Peer from "simple-peer/simplepeer.min.js"; 
 import io from "socket.io-client";
 
-// --- SOCKET CONNECTION SETUP ---
 const socket = io("http://localhost:5000"); 
 
 const dialogSx = { "& .MuiDialog-paper": { background: "rgba(30, 30, 45, 0.6)", backdropFilter: "blur(15px)", boxShadow: "0 8px 32px 0 rgba(0, 0, 0, 0.37)", border: "1px solid rgba(255, 255, 255, 0.18)", borderRadius: "15px", color: "#f1f1f1" } };
@@ -49,7 +46,6 @@ function Chat() {
   const [isMusicModalOpen, setIsMusicModalOpen] = useState(false);
   const [currentSong, setCurrentSong] = useState({ url: null, title: null, isPlaying: false });
 
-  // --- NEW STATE VARIABLES FOR VIDEO CALL ---
   const [stream, setStream] = useState(null);
   const [receivingCall, setReceivingCall] = useState(false);
   const [caller, setCaller] = useState(""); 
@@ -58,12 +54,10 @@ function Chat() {
   const [callAccepted, setCallAccepted] = useState(false);
   const [callEnded, setCallEnded] = useState(false);
 
-  // --- REFS FOR VIDEO ELEMENTS AND PEER CONNECTION ---
   const myVideo = useRef();
   const userVideo = useRef();
   const connectionRef = useRef();
 
-  // --- SOCKET.IO EVENT LISTENERS ---
   useEffect(() => {
     if (!user || !user.uid) return;
 
@@ -76,6 +70,13 @@ function Chat() {
       setCallerSignal(data.signal);
     });
 
+    socket.on("call-accepted", (signal) => {
+      setCallAccepted(true);
+      if (connectionRef.current) {
+        connectionRef.current.signal(signal);
+      }
+    });
+
     socket.on("call-ended", () => {
       setCallEnded(true);
       if (connectionRef.current) {
@@ -84,35 +85,25 @@ function Chat() {
       window.location.reload();
     });
 
-    // We also need a listener for when the call is accepted by the other user
-    socket.on("call-accepted", (signal) => {
-      setCallAccepted(true);
-      // This check is crucial. Only the initiator of the call should signal back.
-      if (connectionRef.current) {
-        connectionRef.current.signal(signal);
-      }
-    });
-
     return () => {
       socket.off("hey-im-calling");
       socket.off("call-ended");
-      socket.off("call-accepted"); // Cleanup listener
+      socket.off("call-accepted"); 
     };
   }, [user]);
 
-  // --- VIDEO CALL FUNCTIONS ---
   const callUser = (idToCall) => {
-    navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then((stream) => {
-      setStream(stream);
-      if (myVideo.current) myVideo.current.srcObject = stream;
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then((mediaStream) => {
+      setStream(mediaStream);
+      if (myVideo.current) myVideo.current.srcObject = mediaStream;
 
-      const peer = new Peer({ initiator: true, trickle: false, stream: stream });
+      const peer = new Peer({ initiator: true, trickle: false, stream: mediaStream });
 
       peer.on("signal", (data) => {
         socket.emit("call-user", {
           userToCall: idToCall,
-          signalData: data,
-          from: user.uid,
+          signalData: data,      
+          from: user.uid,       
           name: user.displayName,
         });
       });
@@ -129,16 +120,14 @@ function Chat() {
     setCallAccepted(true);
     setReceivingCall(false);
 
-    navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then((stream) => {
-      setStream(stream);
-      if (myVideo.current) myVideo.current.srcObject = stream;
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then((mediaStream) => {
+      setStream(mediaStream);
+      if (myVideo.current) myVideo.current.srcObject = mediaStream;
 
-      const peer = new Peer({ initiator: false, trickle: false, stream: stream });
+      const peer = new Peer({ initiator: false, trickle: false, stream: mediaStream });
 
       peer.on("signal", (data) => {
-        // Here, `caller` is the UID of the person who called us.
-        // The server will use this UID to find their socket ID.
-        socket.emit("answer-call", { signal: data, to: caller });
+        socket.emit("answer-call", { signal: data, to: caller }); 
       });
 
       peer.on("stream", (remoteStream) => {
@@ -146,6 +135,7 @@ function Chat() {
       });
 
       peer.signal(callerSignal);
+
       connectionRef.current = peer;
     });
   };
@@ -153,11 +143,7 @@ function Chat() {
   const leaveCall = () => {
     setCallEnded(true);
     if (connectionRef.current) {
-      const otherUserId = getOtherUserId();
-      // We need to tell the other user that the call has ended.
-      // `caller` state holds the UID of the person who called us, if we answered.
-      // `otherUserId` is a good fallback to find the other person in the room.
-      const idToNotify = caller || otherUserId; 
+      const idToNotify = caller || getOtherUserId(); 
       if (idToNotify) {
         socket.emit("end-call", { to: idToNotify });
       }
@@ -202,16 +188,17 @@ function Chat() {
   const formatDate = (isoDate) => { if (!isoDate) return ""; const d = new Date(isoDate); return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`; };
   const filteredMessages = messages.filter((msg) => (!searchQuery ? true : (msg.message?.toLowerCase() || "").includes(searchQuery.toLowerCase()) || (msg.fileName?.toLowerCase() || "").includes(searchQuery.toLowerCase())));
   const renderMessageContent = (message) => { switch (message.messageType) { case "audio": return <audio src={message.audioUrl} controls className="chat__audioPlayer" />; case "image": return (<div className="chat__mediaContainer"><img src={message.fileUrl} alt={message.fileName || "Sent image"} className="chat__mediaImage" />{message.message && <p className="chat__mediaCaption">{message.message}</p>}</div>); case "video": return (<div className="chat__mediaContainer"><video src={message.fileUrl} controls className="chat__mediaVideo" />{message.message && <p className="chat__mediaCaption">{message.message}</p>}</div>); case "document": return (<a href={message.fileUrl} target="_blank" rel="noopener noreferrer" className="chat__documentLink"><div className="chat__documentIcon"><Description /></div><div className="chat__documentInfo"><span>{message.fileName}</span><small>Document</small></div></a>); case "location": return message.location ? (<a href={`https://www.google.com/maps?q=${message.location.lat},${message.location.lon}`} target="_blank" rel="noopener noreferrer" className="chat__locationLink"><div className="chat__locationIcon"><LocationOn /></div><div className="chat__locationInfo"><span>Shared Location</span><small>View on Google Maps</small></div></a>) : (<div className="chat__text">Invalid location data</div>); default: return <div className="chat__text">{message.message}</div>; } };
-  
+
   if (!roomId) return ( <div className="chat chat__welcome"><img src={WelcomeLogo} alt="Welcome to Pookie Gram" /><h1>POOKIE-GRAM</h1><p>Select a chat to start messaging with your favorite pookies.</p></div> );
 
   return (
     <div className="chat">
-      {/* --- VIDEO CALL UI --- */}
       {callAccepted && !callEnded && (
         <div className="chat__videoContainer">
           <video playsInline ref={userVideo} autoPlay className="chat__userVideo" />
+          
           {stream && <video playsInline muted ref={myVideo} autoPlay className="chat__myVideo" />}
+
           <div className="chat__callControls">
             <IconButton onClick={leaveCall} className="chat__hangUpButton">
               <CallEnd />
@@ -220,7 +207,6 @@ function Chat() {
         </div>
       )}
 
-      {/* --- INCOMING CALL NOTIFICATION --- */}
       {receivingCall && !callAccepted && (
         <div className="chat__incomingCall">
           <Avatar />
@@ -238,57 +224,62 @@ function Chat() {
         </div>
       )}
 
-      <audio ref={audioRef} style={{ display: "none" }} onEnded={stopSharedSong} />
-      <div className="chat__header">
-        <Avatar src={roomAvatar} />
-        {showSearch ? (
-          <motion.div className="chat__searchContainer" initial={{ width: 0, opacity: 0 }} animate={{ width: "100%", opacity: 1 }}>
-            <SearchOutlined />
-            <input placeholder="Search messages..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} autoFocus />
-            <IconButton onClick={() => { setShowSearch(false); setSearchQuery(""); }}><Close /></IconButton>
-          </motion.div>
-        ) : (
-          <div className="chat__headerInfo">
-            <h3>{roomName}</h3>
-            <p>{updatedAt ? `Last active on ${formatDate(updatedAt)}` : "..."}</p>
+      {(!callAccepted || callEnded) && (
+        <>
+          <audio ref={audioRef} style={{ display: "none" }} onEnded={stopSharedSong} />
+          <div className="chat__header">
+            <Avatar src={roomAvatar} />
+            {showSearch ? (
+              <motion.div className="chat__searchContainer" initial={{ width: 0, opacity: 0 }} animate={{ width: "100%", opacity: 1 }}>
+                <SearchOutlined />
+                <input placeholder="Search messages..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} autoFocus />
+                <IconButton onClick={() => { setShowSearch(false); setSearchQuery(""); }}><Close /></IconButton>
+              </motion.div>
+            ) : (
+              <div className="chat__headerInfo">
+                <h3>{roomName}</h3>
+                <p>{updatedAt ? `Last active on ${formatDate(updatedAt)}` : "..."}</p>
+              </div>
+            )}
+            <div className="chat__headerRight">
+              <IconButton onClick={() => {
+                const otherUserId = getOtherUserId();
+                if (otherUserId) {
+                  callUser(otherUserId);
+                } else {
+                  alert("Cannot start a call. This feature requires at least two members in the room.");
+                }
+              }}>
+                <Videocam />
+              </IconButton>
+              {!showSearch && <IconButton onClick={() => setShowSearch(true)}><SearchOutlined /></IconButton>}
+              <IconButton onClick={() => setIsMusicModalOpen(true)}><MusicNote /></IconButton>
+              <div className="chat__attachment"><IconButton onClick={() => setShowAttachmentMenu((p) => !p)}><AttachFile /></IconButton><AnimatePresence>{showAttachmentMenu && (<motion.div className="chat__menu" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}><div onClick={handleFileSelection}><Photo />Photos & Videos</div><div onClick={handleFileSelection}><Description />Document</div><div onClick={sendLocation}><LocationOn />Location</div></motion.div>)}</AnimatePresence></div>
+              <div className="chat__more"><IconButton onClick={() => setShowMoreMenu((p) => !p)}><MoreVert /></IconButton><AnimatePresence>{showMoreMenu && (<motion.div className="chat__menu" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}><div onClick={handleOpenClearDialog}><DeleteForever />Clear all chat</div></motion.div>)}</AnimatePresence></div>
+            </div>
           </div>
-        )}
-        <div className="chat__headerRight">
-          <IconButton onClick={() => {
-            const otherUserId = getOtherUserId();
-            if (otherUserId) {
-              callUser(otherUserId);
-            } else {
-              alert("Cannot start a call. This feature is for 1-on-1 chats and requires at least two members in the room.");
-            }
-          }}>
-            <Videocam />
-          </IconButton>
-          {!showSearch && <IconButton onClick={() => setShowSearch(true)}><SearchOutlined /></IconButton>}
-          <IconButton onClick={() => setIsMusicModalOpen(true)}><MusicNote /></IconButton>
-          <div className="chat__attachment"><IconButton onClick={() => setShowAttachmentMenu((p) => !p)}><AttachFile /></IconButton><AnimatePresence>{showAttachmentMenu && (<motion.div className="chat__menu" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}><div onClick={handleFileSelection}><Photo />Photos & Videos</div><div onClick={handleFileSelection}><Description />Document</div><div onClick={sendLocation}><LocationOn />Location</div></motion.div>)}</AnimatePresence></div>
-          <div className="chat__more"><IconButton onClick={() => setShowMoreMenu((p) => !p)}><MoreVert /></IconButton><AnimatePresence>{showMoreMenu && (<motion.div className="chat__menu" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}><div onClick={handleOpenClearDialog}><DeleteForever />Clear all chat</div></motion.div>)}</AnimatePresence></div>
-        </div>
-      </div>
-      <input type="file" ref={fileInputRef} style={{ display: "none" }} onChange={handleFileUpload} accept="image/*,video/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx" />
-      <div className="chat__body" onClick={() => { setShowAttachmentMenu(false); setShowEmojiPicker(false); setShowMoreMenu(false); setMessageToDeleteId(null); }}>
-        <AnimatePresence>
-          {filteredMessages.map((message) => (
-            <motion.div layout key={message._id} className={`chat__message ${message.uid === user.uid && "chat__receiver"}`} initial={{ opacity: 0, y: 20, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} transition={{ duration: 0.3, ease: "easeOut" }} onDoubleClick={() => message.uid === user.uid && setMessageToDeleteId(message._id)}>
-              <AnimatePresence>{messageToDeleteId === message._id && (<motion.div className="chat__messageDelete" onClick={() => handleDeleteMessage(message._id)} initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.5 }}><DeleteForever /></motion.div>)}</AnimatePresence>
-              {message.uid !== user.uid && <span className="chat__name">{message.name}</span>}
-              <div className="chat__messageContent">{renderMessageContent(message)}<span className="chat__timestamp">{formatTimestamp(message.timestamp)}</span></div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-        <div ref={messagesEndRef} />
-      </div>
-      <AnimatePresence>{currentSong.url && (<motion.div className="chat__musicPlayer" initial={{ y: 60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 60, opacity: 0 }} transition={{ type: "spring", stiffness: 300, damping: 30 }}><div className="chat__musicPlayer_info"><MusicNote fontSize="small" /><span title={currentSong.title}>{currentSong.title}</span></div><div className="chat__musicPlayer_controls">{currentSong.isPlaying ? (<IconButton onClick={pauseSharedSong} title="Pause"><Pause /></IconButton>) : (<IconButton onClick={resumeSharedSong} title="Play"><PlayArrow /></IconButton>)}<IconButton onClick={stopSharedSong} title="Stop"><Stop /></IconButton></div></motion.div>)}</AnimatePresence>
-      <div className="chat__footer">
-        <div className="chat__emoji"><IconButton onClick={() => setShowEmojiPicker((p) => !p)}><InsertEmoticon /></IconButton>{showEmojiPicker && (<div className="chat__emojiPickerContainer"><Picker onEmojiClick={(e) => setInput((prev) => prev + e.emoji)} theme="dark" /></div>)}</div>
-        <form onSubmit={sendMessage}><input type="text" placeholder={status === "recording" ? "Recording voice message..." : "Type a message"} value={input} onChange={(e) => setInput(e.target.value)} onFocus={() => { setShowEmojiPicker(false); setShowAttachmentMenu(false); setShowMoreMenu(false); setMessageToDeleteId(null); }} disabled={status === "recording"} /></form>
-        {input ? (<IconButton type="submit" onClick={sendMessage} className="chat__sendButton"><Send /></IconButton>) : (<IconButton onClick={status === "recording" ? stopRecording : startRecording}>{status === "recording" ? <StopCircle className="chat__mic_recording" /> : <Mic />}</IconButton>)}
-      </div>
+          <input type="file" ref={fileInputRef} style={{ display: "none" }} onChange={handleFileUpload} accept="image/*,video/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx" />
+          <div className="chat__body" onClick={() => { setShowAttachmentMenu(false); setShowEmojiPicker(false); setShowMoreMenu(false); setMessageToDeleteId(null); }}>
+              <AnimatePresence>
+                {filteredMessages.map((message) => (
+                  <motion.div layout key={message._id} className={`chat__message ${message.uid === user.uid && "chat__receiver"}`} initial={{ opacity: 0, y: 20, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} transition={{ duration: 0.3, ease: "easeOut" }} onDoubleClick={() => message.uid === user.uid && setMessageToDeleteId(message._id)}>
+                    <AnimatePresence>{messageToDeleteId === message._id && (<motion.div className="chat__messageDelete" onClick={() => handleDeleteMessage(message._id)} initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.5 }}><DeleteForever /></motion.div>)}</AnimatePresence>
+                    {message.uid !== user.uid && <span className="chat__name">{message.name}</span>}
+                    <div className="chat__messageContent">{renderMessageContent(message)}<span className="chat__timestamp">{formatTimestamp(message.timestamp)}</span></div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+              <div ref={messagesEndRef} />
+          </div>
+          <AnimatePresence>{currentSong.url && (<motion.div className="chat__musicPlayer" initial={{ y: 60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 60, opacity: 0 }} transition={{ type: "spring", stiffness: 300, damping: 30 }}><div className="chat__musicPlayer_info"><MusicNote fontSize="small" /><span title={currentSong.title}>{currentSong.title}</span></div><div className="chat__musicPlayer_controls">{currentSong.isPlaying ? (<IconButton onClick={pauseSharedSong} title="Pause"><Pause /></IconButton>) : (<IconButton onClick={resumeSharedSong} title="Play"><PlayArrow /></IconButton>)}<IconButton onClick={stopSharedSong} title="Stop"><Stop /></IconButton></div></motion.div>)}</AnimatePresence>
+          <div className="chat__footer">
+            <div className="chat__emoji"><IconButton onClick={() => setShowEmojiPicker((p) => !p)}><InsertEmoticon /></IconButton>{showEmojiPicker && (<div className="chat__emojiPickerContainer"><Picker onEmojiClick={(e) => setInput((prev) => prev + e.emoji)} theme="dark" /></div>)}</div>
+            <form onSubmit={sendMessage}><input type="text" placeholder={status === "recording" ? "Recording voice message..." : "Type a message"} value={input} onChange={(e) => setInput(e.target.value)} onFocus={() => { setShowEmojiPicker(false); setShowAttachmentMenu(false); setShowMoreMenu(false); setMessageToDeleteId(null); }} disabled={status === "recording"} /></form>
+            {input ? (<IconButton type="submit" onClick={sendMessage} className="chat__sendButton"><Send /></IconButton>) : (<IconButton onClick={status === "recording" ? stopRecording : startRecording}>{status === "recording" ? <StopCircle className="chat__mic_recording" /> : <Mic />}</IconButton>)}
+          </div>
+        </>
+      )}
+
       <MusicSearchModal open={isMusicModalOpen} onClose={() => setIsMusicModalOpen(false)} onSongSelect={handleSelectSong} />
       <Dialog open={isClearChatDialogOpen} onClose={handleCloseClearDialog} sx={dialogSx}>
         <DialogTitle>{"Clear all messages in this chat?"}</DialogTitle>

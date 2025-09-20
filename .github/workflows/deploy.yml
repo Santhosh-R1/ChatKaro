@@ -1,0 +1,61 @@
+# A descriptive name for your workflow
+name: MERN Platform Deployment Trigger
+
+# Defines what triggers the workflow
+on:
+  workflow_dispatch:
+    # These are the parameters your MERN backend will send
+    inputs:
+      target_cloud:
+        description: 'The cloud platform to deploy to (e.g., aws, heroku)'
+        required: true
+      deployment_id:
+        description: 'The unique ID for this deployment record in our MERN app database'
+        required: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      # Step 1: Checks-out your repository code
+      - name: 1. Checkout repository code
+        uses: actions/checkout@v4
+
+      # Step 2: Placeholder for your actual deployment logic
+      - name: 2. Simulate Deployment & Generate URL
+        id: deploy_step 
+        run: |
+          echo "Simulating deployment for ${{ github.event.inputs.target_cloud }}..."
+          sleep 5
+          
+          # FAKE URL GENERATION LOGIC
+          if [[ "${{ github.event.inputs.target_cloud }}" == "heroku" ]]; then
+            echo "DEPLOYMENT_URL=https://my-new-app-${{ github.run_id }}.herokuapp.com" >> $GITHUB_OUTPUT
+          else
+            echo "DEPLOYMENT_URL=https://my-new-generic-link.com" >> $GITHUB_OUTPUT
+          fi
+          
+          echo "Deployment simulation finished!"
+
+      # Step 3: Runs ONLY if all previous steps were successful
+      - name: 3. Report Success to API
+        if: success()
+        run: |
+          curl --fail -v -X PATCH "${{ secrets.API_URL }}/api/projects/${{ secrets.PROJECT_ID }}/deployments/${{ github.event.inputs.deployment_id }}" \
+          -H "Content-Type: application/json" \
+          --data-raw '{
+            "status": "success",
+            "deploymentUrl": "${{ steps.deploy_step.outputs.DEPLOYMENT_URL }}",
+            "apiKey": "${{ secrets.ACTIONS_API_KEY }}"
+          }'
+
+      # Step 4: Runs ONLY if any previous step failed
+      - name: 4. Report Failure to API
+        if: failure()
+        run: |
+          curl --fail -v -X PATCH "${{ secrets.API_URL }}/api/projects/${{ secrets.PROJECT_ID }}/deployments/${{ github.event.inputs.deployment_id }}" \
+          -H "Content-Type: application/json" \
+          --data-raw '{
+            "status": "failure",
+            "apiKey": "${{ secrets.ACTIONS_API_KEY }}"
+          }'

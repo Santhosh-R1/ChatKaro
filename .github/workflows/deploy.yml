@@ -19,7 +19,7 @@ jobs:
     # ===================================================================
     defaults:
       run:
-        working-directory: ./chatkaro
+        working-directory: ./Chat
 
     steps:
       - name: 1. Checkout repository code

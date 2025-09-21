@@ -15,17 +15,29 @@ jobs:
       - name: 1. Checkout repository code
         uses: actions/checkout@v4
 
-      - name: 2. Simulate Deployment & Generate URL
-        id: deploy_step 
-        run: |
-          echo "Simulating deployment..."
-          sleep 5
-          echo "DEPLOYMENT_URL=https://my-app-${{ github.run_id }}.example.com" >> $GITHUB_OUTPUT
+      # ===================================================================
+      #  THE SIMULATION IS REPLACED WITH A REAL DEPLOYMENT TO VERCEL
+      # ===================================================================
+      - name: 2. Install Vercel CLI
+        run: npm install --global vercel
 
-      - name: 3. Report Success to API
+      - name: 3. Deploy Project to Vercel and Capture URL
+        id: deploy_step
+        run: |
+          # The 'vercel --prod' command deploys to the main production URL.
+          # It outputs the live URL upon success, which we capture.
+          # The secrets tell the CLI which project to deploy to.
+          DEPLOYMENT_URL=$(vercel --prod --token=${{ secrets.VERCEL_TOKEN }} --scope=${{ secrets.VERCEL_ORG_ID }})
+          
+          # Now, we set this captured URL as an output for the next step.
+          echo "DEPLOYMENT_URL=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+
+      # ===================================================================
+
+      - name: 4. Report Success to API
         if: success()
         run: |
-          # Using secrets again - this is the correct, permanent way
+          # This step now sends the REAL Vercel deployment URL back to your backend.
           curl --fail -v -X PATCH '${{ secrets.API_URL }}/api/projects/${{ secrets.PROJECT_ID }}/deployments/${{ github.event.inputs.deployment_id }}' \
           -H "Content-Type: application/json" \
           --data-raw '{
@@ -34,7 +46,7 @@ jobs:
             "apiKey": "${{ secrets.ACTIONS_API_KEY }}"
           }'
 
-      - name: 4. Report Failure to API
+      - name: 5. Report Failure to API
         if: failure()
         run: |
           curl --fail -v -X PATCH '${{ secrets.API_URL }}/api/projects/${{ secrets.PROJECT_ID }}/deployments/${{ github.event.inputs.deployment_id }}' \

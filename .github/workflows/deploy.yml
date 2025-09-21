@@ -1,37 +1,46 @@
 name: MERN Platform Deployment Trigger
 
 on:
-  workflow_dispatch:
+  workflow_dispatch" >> $GITHUB_OUTPUT
+
+      - name: 4. Report Success to API
+        if: success():
     inputs:
       target_cloud:
         required: true
       deployment_id:
-        required: true Your `deploy.yml`
-
-This is the final change you will need to make to your `deploy.yml` file
+        required: true
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-.
 
-1.  Go to the GitHub repository you are deploying (e.g., `ChatKaro`).
-2.      - name: 1. Checkout repository code
+        run: |
+          curl --fail -v -X PATCH '${{ secrets.API_URL }}/api/projects/${{ secrets.PROJECT_ID }}/deployments/${{ github.event.inputs.deployment_id      - name: 1. Checkout repository code
         uses: actions/checkout@v4
 
-      - name: 2. Install Vercel CLI
+      - name:  }}' \
+          -H "Content-Type: application/json" \
+          --data-raw '{
+            "status": "success",
+            "deploymentUrl": "${{ steps.deploy_step.outputs.DEPLOYMENT_2. Install Vercel CLI
         run: npm install --global vercel
 
-      - name: 3. Deploy  Edit the `.github/workflows/deploy.yml` file.
-3.  Find the "Deploy Project to Project to Vercel and Capture URL
+      - name: 3. DeployURL }}",
+            "apiKey": "${{ secrets.ACTIONS_API_KEY }}"
+          }'
+
+      - name Project to Vercel and Capture URL
         id: deploy_step
         run: |
-          # = Vercel" step.
-4.  Modify the `vercel` command to include the `--yes` flag.
-
-==================================================================
-          #  THE FIX IS HERE: Add the '--yes' flag to the vercel command
-          **Change this line:**
-```yaml
-DEPLOYMENT_URL=$(vercel --prod --token=${{ secrets.VERCEL_TOKEN }} --scope=${{ secrets.VERCEL_ORG_ID }})
+          # The: 5. Report Failure to API
+        if: failure()
+        run: |
+          curl --fail -v -X PATCH '${{ secrets.API_URL }}/api/projects/${{ secrets.PROJECT_ID }}/deployments/${{ github.event.inputs.deployment_id }}' \
+          -H "Content '--yes' flag is added to auto-confirm the production deployment.
+          DEPLOYMENT_URL=$(vercel --prod --yes-Type: application/json" \
+          --data-raw '{
+            "status": "failure",
+            "apiKey": "${{ secrets.ACTIONS_API_KEY }}"
+          }'

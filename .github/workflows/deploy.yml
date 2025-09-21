@@ -14,8 +14,7 @@ jobs:
     
     defaults:
       run:
-        # IMPORTANT: REPLACE 'Chat' WITH THE ACTUAL NAME OF THE FOLDER
-        # INSIDE YOUR REPOSITORY THAT CONTAINS 'package.json'.
+        # This is correct. Commands will run inside your project's subfolder.
         working-directory: ./Chat
 
     steps:
@@ -43,9 +42,12 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
-          # The 'vercel deploy' command points to the build output folder.
-          # IMPORTANT: If your project's build output is named 'build', change './dist' to './build'.
-          DEPLOYMENT_URL=$(vercel deploy ./dist --prod --yes --token=${{ secrets.VERCEL_TOKEN }})
+          # ===================================================================
+          #  THE FIX IS HERE: We remove the path from the deploy command.
+          #  Vercel will use the "Root Directory" and "Output Directory"
+          #  settings from your project on Vercel.com.
+          # ===================================================================
+          DEPLOYMENT_URL=$(vercel --prod --yes --token=${{ secrets.VERCEL_TOKEN }})
           echo "DEPLOYMENT_URL=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
       
       - name: 7. Report Success to API

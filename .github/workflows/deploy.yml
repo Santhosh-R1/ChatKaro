@@ -12,13 +12,10 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     
-    # ===================================================================
-    #  THE FIRST FIX IS HERE: Set a default working directory for all steps
-    #  IMPORTANT: Change 'chatkaro' to the actual name of the subdirectory
-    #  in your repository that contains package.json.
-    # ===================================================================
     defaults:
       run:
+        # IMPORTANT: REPLACE 'Chat' WITH THE ACTUAL NAME OF THE FOLDER
+        # INSIDE YOUR REPOSITORY THAT CONTAINS 'package.json'.
         working-directory: ./Chat
 
     steps:
@@ -30,7 +27,6 @@ jobs:
         with:
           node-version: '20'
 
-      # These commands will now run inside the './chatkaro' directory
       - name: 3. Install Dependencies
         run: npm install
 
@@ -38,9 +34,8 @@ jobs:
         run: npm run build
 
       - name: 5. Install Vercel CLI
-        # Install CLI in the root, as it doesn't need to be in the subfolder
         run: npm install --global vercel
-        working-directory: /home/runner/work/ChatKaro/ChatKaro # Override to run in root
+        working-directory: ${{ github.workspace }}
 
       - name: 6. Deploy to Vercel
         id: deploy_step
@@ -48,13 +43,14 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
-          # The path to the build output is now relative to the subfolder
-          DEPLOYMENT_URL=$(vercel deploy ./build --prod --yes --token=${{ secrets.VERCEL_TOKEN }})
+          # The 'vercel deploy' command points to the build output folder.
+          # IMPORTANT: If your project's build output is named 'build', change './dist' to './build'.
+          DEPLOYMENT_URL=$(vercel deploy ./dist --prod --yes --token=${{ secrets.VERCEL_TOKEN }})
           echo "DEPLOYMENT_URL=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
       
       - name: 7. Report Success to API
         if: success()
-        working-directory: /home/runner/work/ChatKaro/ChatKaro # Override to run in root
+        working-directory: ${{ github.workspace }}
         run: |
           curl --fail -v -X PATCH '${{ secrets.API_URL }}/api/projects/${{ secrets.PROJECT_ID }}/deployments/${{ github.event.inputs.deployment_id }}' \
           -H "Content-Type: application/json" \
@@ -66,7 +62,7 @@ jobs:
 
       - name: 8. Report Failure to API
         if: failure()
-        working-directory: /home/runner/work/ChatKaro/ChatKaro # Override to run in root
+        working-directory: ${{ github.workspace }}
         run: |
           curl --fail -v -X PATCH '${{ secrets.API_URL }}/api/projects/${{ secrets.PROJECT_ID }}/deployments/${{ github.event.inputs.deployment_id }}' \
           -H "Content-Type: application/json" \

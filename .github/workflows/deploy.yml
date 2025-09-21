@@ -1,5 +1,5 @@
 # A descriptive name for your workflow
-name: MERN Platform Deployment Trigger
+name: MERN Platform Deployment Trigger (Debug Version with Hardcoded URL)
 
 # Defines what triggers the workflow
 on:
@@ -19,10 +19,10 @@ jobs:
       - name: 1. Checkout repository code
         uses: actions/checkout@v4
 
-      # Step 2 (Optional but recommended): Debug step to confirm secrets are being read
-      - name: "Debug Secrets (Temporary)"
+      # Step 2: Debug step to confirm the OTHER secrets are being read correctly
+      - name: "2. Debug Other Secrets (Temporary)"
         run: |
-          echo "API_URL exists: ${{ secrets.API_URL != '' }}"
+          # NOTE: We are hardcoding API_URL, so we are only checking the other secrets here.
           echo "PROJECT_ID exists: ${{ secrets.PROJECT_ID != '' }}"
           echo "ACTIONS_API_KEY exists: ${{ secrets.ACTIONS_API_KEY != '' }}"
 
@@ -36,15 +36,15 @@ jobs:
           echo "Deployment simulation finished!"
 
       # ===================================================================
-      #  THE FIX IS IN THE 'curl' COMMANDS BELOW (SINGLE QUOTES ADDED)
+      #  THE HARDCODED URL IS IN THE 'curl' COMMANDS BELOW
       # ===================================================================
       
       # Step 4: Runs ONLY if all previous steps were successful
-      - name: 4. Report Success to API
+      - name: 4. Report Success to API (with Hardcoded URL)
         if: success()
         run: |
-          # The entire URL is now wrapped in single quotes to treat it as a literal string
-          curl --fail -v -X PATCH '${{ secrets.API_URL }}/api/projects/${{ secrets.PROJECT_ID }}/deployments/${{ github.event.inputs.deployment_id }}' \
+          # IMPORTANT: Replace the URL below with YOUR CURRENT localtunnel URL.
+          curl --fail -v -X PATCH 'https://shiny-pugs-yawn.loca.lt/api/projects/${{ secrets.PROJECT_ID }}/deployments/${{ github.event.inputs.deployment_id }}' \
           -H "Content-Type: application/json" \
           --data-raw '{
             "status": "success",
@@ -53,12 +53,12 @@ jobs:
           }'
 
       # Step 5: Runs ONLY if any previous step failed
-      - name: 5. Report Failure to API
+      - name: 5. Report Failure to API (with Hardcoded URL)
         if: failure()
         run: |
-          # The entire URL is also wrapped in single quotes here
-          curl --fail -v -X PATCH '${{ secrets.API_URL }}/api/projects/${{ secrets.PROJECT_ID }}/deployments/${{ github.event.inputs.deployment_id }}' \
-          -H "Content-content-type: application/json" \
+          # IMPORTANT: Also replace the URL below with YOUR CURRENT localtunnel URL.
+          curl --fail -v -X PATCH 'https://shiny-pugs-yawn.loca.lt/api/projects/${{ secrets.PROJECT_ID }}/deployments/${{ github.event.inputs.deployment_id }}' \
+          -H "Content-Type: application/json" \
           --data-raw '{
             "status": "failure",
             "apiKey": "${{ secrets.ACTIONS_API_KEY }}"

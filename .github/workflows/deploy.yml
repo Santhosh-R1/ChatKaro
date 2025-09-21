@@ -1,63 +1,61 @@
-# A descriptive name for your workflow
 name: Deploy ChatKaro via MERN Platform
 
-# Defines what triggers the workflow
 on:
   workflow_dispatch:
-    # These are the ONLY inputs this workflow expects from your backend.
     inputs:
-      target_cloud: # Kept for consistency, though we only deploy to Vercel here
+      target_cloud:
         required: true
       deployment_id:
-        description: 'The unique ID for this deployment record'
         required: true
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    
+    # ===================================================================
+    #  THE FIRST FIX IS HERE: Set a default working directory for all steps
+    #  IMPORTANT: Change 'chatkaro' to the actual name of the subdirectory
+    #  in your repository that contains package.json.
+    # ===================================================================
+    defaults:
+      run:
+        working-directory: ./chatkaro
+
     steps:
-      # Step 1: Checks-out your repository's code
       - name: 1. Checkout repository code
         uses: actions/checkout@v4
 
-      # Step 2: Set up the correct Node.js version for your project
       - name: 2. Setup Node.js environment
         uses: actions/setup-node@v4
         with:
-          node-version: '20' # Use the Node.js version your project requires
+          node-version: '20'
 
-      # Step 3: Install project dependencies
+      # These commands will now run inside the './chatkaro' directory
       - name: 3. Install Dependencies
         run: npm install
 
-      # Step 4: Build the production-ready application
-      # This creates an optimized 'dist' or 'build' folder.
       - name: 4. Build Project
         run: npm run build
 
-      # Step 5: Install the Vercel CLI
       - name: 5. Install Vercel CLI
+        # Install CLI in the root, as it doesn't need to be in the subfolder
         run: npm install --global vercel
+        working-directory: /home/runner/work/ChatKaro/ChatKaro # Override to run in root
 
-      # Step 6: Deploy to Vercel and capture the real URL
       - name: 6. Deploy to Vercel
         id: deploy_step
         env:
-          # Set Vercel secrets as environment variables for the Vercel CLI
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
-          # The 'vercel --prod --yes' command deploys the project to production.
-          # The '--token' authenticates the command.
-          # We capture the output URL from the command.
-          DEPLOYMENT_URL=$(vercel deploy ./dist --prod --yes --token=${{ secrets.VERCEL_TOKEN }})
+          # The path to the build output is now relative to the subfolder
+          DEPLOYMENT_URL=$(vercel deploy ./build --prod --yes --token=${{ secrets.VERCEL_TOKEN }})
           echo "DEPLOYMENT_URL=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
       
-      # Step 7: Report the final status back to your MERN dashboard
       - name: 7. Report Success to API
         if: success()
+        working-directory: /home/runner/work/ChatKaro/ChatKaro # Override to run in root
         run: |
-          # This step now sends the REAL Vercel URL back to your backend.
           curl --fail -v -X PATCH '${{ secrets.API_URL }}/api/projects/${{ secrets.PROJECT_ID }}/deployments/${{ github.event.inputs.deployment_id }}' \
           -H "Content-Type: application/json" \
           --data-raw '{
@@ -68,6 +66,7 @@ jobs:
 
       - name: 8. Report Failure to API
         if: failure()
+        working-directory: /home/runner/work/ChatKaro/ChatKaro # Override to run in root
         run: |
           curl --fail -v -X PATCH '${{ secrets.API_URL }}/api/projects/${{ secrets.PROJECT_ID }}/deployments/${{ github.event.inputs.deployment_id }}' \
           -H "Content-Type: application/json" \

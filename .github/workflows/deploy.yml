@@ -12,10 +12,7 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     
-    defaults:
-      run:
-        # This matches your "Root Directory" setting on Vercel.
-        working-directory: ./Chat
+    # We have REMOVED the 'defaults' section to avoid path conflicts.
 
     steps:
       - name: 1. Checkout repository code
@@ -26,17 +23,21 @@ jobs:
         with:
           node-version: '20'
 
+      # ===================================================================
+      #  THE FIX IS HERE: We now specify the 'working-directory' for each
+      #  command that needs to run inside your project's subfolder.
+      # ===================================================================
       - name: 3. Install Dependencies
         run: npm install
+        working-directory: ./Chat # Run 'npm install' inside the 'Chat' folder
 
       - name: 4. Build Project
-        # This matches your "Build Command" setting on Vercel.
         run: npm run build
+        working-directory: ./Chat # Run 'npm run build' inside the 'Chat' folder
 
       - name: 5. Install Vercel CLI
-        # Install CLI in the root, so it's globally available.
         run: npm install --global vercel
-        working-directory: ${{ github.workspace }}
+        # No working-directory needed here, as it's a global install.
 
       - name: 6. Deploy to Vercel
         id: deploy_step
@@ -44,18 +45,14 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
-          # ===================================================================
-          #  THIS IS THE FINAL, CORRECTED COMMAND.
-          #  It no longer specifies a path, allowing your Vercel project
-          #  settings ('Root Directory: Chat', 'Output Directory: dist')
-          #  to take control.
-          # ===================================================================
+          # We run this command from the root of the repository.
+          # Vercel will now correctly use the "Root Directory: Chat" setting
+          # from your project settings without any conflict.
           DEPLOYMENT_URL=$(vercel --prod --yes --token=${{ secrets.VERCEL_TOKEN }})
           echo "DEPLOYMENT_URL=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
       
       - name: 7. Report Success to API
         if: success()
-        working-directory: ${{ github.workspace }}
         run: |
           curl --fail -v -X PATCH '${{ secrets.API_URL }}/api/projects/${{ secrets.PROJECT_ID }}/deployments/${{ github.event.inputs.deployment_id }}' \
           -H "Content-Type: application/json" \
@@ -67,7 +64,6 @@ jobs:
 
       - name: 8. Report Failure to API
         if: failure()
-        working-directory: ${{ github.workspace }}
         run: |
           curl --fail -v -X PATCH '${{ secrets.API_URL }}/api/projects/${{ secrets.PROJECT_ID }}/deployments/${{ github.event.inputs.deployment_id }}' \
           -H "Content-Type: application/json" \

@@ -14,7 +14,7 @@ jobs:
     
     defaults:
       run:
-        # This is correct. Commands will run inside your project's subfolder.
+        # This matches your "Root Directory" setting on Vercel.
         working-directory: ./Chat
 
     steps:
@@ -30,9 +30,11 @@ jobs:
         run: npm install
 
       - name: 4. Build Project
+        # This matches your "Build Command" setting on Vercel.
         run: npm run build
 
       - name: 5. Install Vercel CLI
+        # Install CLI in the root, so it's globally available.
         run: npm install --global vercel
         working-directory: ${{ github.workspace }}
 
@@ -43,9 +45,10 @@ jobs:
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
           # ===================================================================
-          #  THE FIX IS HERE: We remove the path from the deploy command.
-          #  Vercel will use the "Root Directory" and "Output Directory"
-          #  settings from your project on Vercel.com.
+          #  THIS IS THE FINAL, CORRECTED COMMAND.
+          #  It no longer specifies a path, allowing your Vercel project
+          #  settings ('Root Directory: Chat', 'Output Directory: dist')
+          #  to take control.
           # ===================================================================
           DEPLOYMENT_URL=$(vercel --prod --yes --token=${{ secrets.VERCEL_TOKEN }})
           echo "DEPLOYMENT_URL=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT

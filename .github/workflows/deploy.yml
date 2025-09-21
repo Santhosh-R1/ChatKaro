@@ -6,52 +6,32 @@ on:
       target_cloud:
         required: true
       deployment_id:
-        required: true
+        required: true Your `deploy.yml`
+
+This is the final change you will need to make to your `deploy.yml` file
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: 1. Checkout repository code
+.
+
+1.  Go to the GitHub repository you are deploying (e.g., `ChatKaro`).
+2.      - name: 1. Checkout repository code
         uses: actions/checkout@v4
 
-      # ===================================================================
-      #  THE SIMULATION IS REPLACED WITH A REAL DEPLOYMENT TO VERCEL
-      # ===================================================================
       - name: 2. Install Vercel CLI
         run: npm install --global vercel
 
-      - name: 3. Deploy Project to Vercel and Capture URL
+      - name: 3. Deploy  Edit the `.github/workflows/deploy.yml` file.
+3.  Find the "Deploy Project to Project to Vercel and Capture URL
         id: deploy_step
         run: |
-          # The 'vercel --prod' command deploys to the main production URL.
-          # It outputs the live URL upon success, which we capture.
-          # The secrets tell the CLI which project to deploy to.
-          DEPLOYMENT_URL=$(vercel --prod --token=${{ secrets.VERCEL_TOKEN }} --scope=${{ secrets.VERCEL_ORG_ID }})
-          
-          # Now, we set this captured URL as an output for the next step.
-          echo "DEPLOYMENT_URL=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+          # = Vercel" step.
+4.  Modify the `vercel` command to include the `--yes` flag.
 
-      # ===================================================================
-
-      - name: 4. Report Success to API
-        if: success()
-        run: |
-          # This step now sends the REAL Vercel deployment URL back to your backend.
-          curl --fail -v -X PATCH '${{ secrets.API_URL }}/api/projects/${{ secrets.PROJECT_ID }}/deployments/${{ github.event.inputs.deployment_id }}' \
-          -H "Content-Type: application/json" \
-          --data-raw '{
-            "status": "success",
-            "deploymentUrl": "${{ steps.deploy_step.outputs.DEPLOYMENT_URL }}",
-            "apiKey": "${{ secrets.ACTIONS_API_KEY }}"
-          }'
-
-      - name: 5. Report Failure to API
-        if: failure()
-        run: |
-          curl --fail -v -X PATCH '${{ secrets.API_URL }}/api/projects/${{ secrets.PROJECT_ID }}/deployments/${{ github.event.inputs.deployment_id }}' \
-          -H "Content-Type: application/json" \
-          --data-raw '{
-            "status": "failure",
-            "apiKey": "${{ secrets.ACTIONS_API_KEY }}"
-          }'
+==================================================================
+          #  THE FIX IS HERE: Add the '--yes' flag to the vercel command
+          **Change this line:**
+```yaml
+DEPLOYMENT_URL=$(vercel --prod --token=${{ secrets.VERCEL_TOKEN }} --scope=${{ secrets.VERCEL_ORG_ID }})

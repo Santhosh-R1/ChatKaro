@@ -1,43 +1,39 @@
-# A descriptive name for your workflow
 name: MERN Platform Deployment Trigger
 
-# Defines what triggers the workflow
 on:
   workflow_dispatch:
-    # These are the parameters your MERN backend will send
     inputs:
       target_cloud:
-        description: 'The cloud platform to deploy to (e.g., aws, heroku)'
         required: true
       deployment_id:
-        description: 'The unique ID for this deployment record in our MERN app database'
         required: true
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      # Step 1: Checks-out your repository code
       - name: 1. Checkout repository code
         uses: actions/checkout@v4
 
-      # Step 2: Placeholder for your actual deployment logic
+      # ===================================================================
+      #  NEW DEBUGGING STEP - THIS WILL SHOW US THE REAL VALUES
+      # ===================================================================
+      - name: "Debug Secrets (Temporary)"
+        run: |
+          echo "--- Start of Secrets ---"
+          echo "API_URL: [${{ secrets.API_URL }}]"
+          echo "PROJECT_ID: [${{ secrets.PROJECT_ID }}]"
+          echo "ACTIONS_API_KEY: [${{ secrets.ACTIONS_API_KEY }}]"
+          echo "--- End of Secrets ---"
+
       - name: 2. Simulate Deployment & Generate URL
         id: deploy_step 
         run: |
-          echo "Simulating deployment for ${{ github.event.inputs.target_cloud }}..."
-          sleep 5
-          
-          # FAKE URL GENERATION LOGIC
-          if [[ "${{ github.event.inputs.target_cloud }}" == "heroku" ]]; then
-            echo "DEPLOYMENT_URL=https://my-new-app-${{ github.run_id }}.herokuapp.com" >> $GITHUB_OUTPUT
-          else
-            echo "DEPLOYMENT_URL=https://my-new-generic-link.com" >> $GITHUB_OUTPUT
-          fi
-          
+          echo "Simulating deployment..."
+          sleep 1
+          echo "DEPLOYMENT_URL=https://my-app-${{ github.run_id }}.example.com" >> $GITHUB_OUTPUT
           echo "Deployment simulation finished!"
 
-      # Step 3: Runs ONLY if all previous steps were successful
       - name: 3. Report Success to API
         if: success()
         run: |
@@ -49,7 +45,6 @@ jobs:
             "apiKey": "${{ secrets.ACTIONS_API_KEY }}"
           }'
 
-      # Step 4: Runs ONLY if any previous step failed
       - name: 4. Report Failure to API
         if: failure()
         run: |

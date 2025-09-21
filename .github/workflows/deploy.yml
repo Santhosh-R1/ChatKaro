@@ -1,12 +1,9 @@
 name: MERN Platform Deployment Trigger
 
 on:
-  workflow_dispatch" >> $GITHUB_OUTPUT
-
-      - name: 4. Report Success to API
-        if: success():
+  workflow_dispatch:
     inputs:
-      target_cloud:
+      target_cloud: # We still keep this for future logic
         required: true
       deployment_id:
         required: true
@@ -15,31 +12,45 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-
-        run: |
-          curl --fail -v -X PATCH '${{ secrets.API_URL }}/api/projects/${{ secrets.PROJECT_ID }}/deployments/${{ github.event.inputs.deployment_id      - name: 1. Checkout repository code
+      - name: 1. Checkout repository code
         uses: actions/checkout@v4
 
-      - name:  }}' \
+      # ===================================================================
+      #  THE SIMULATION IS REPLACED WITH A REAL DEPLOYMENT TO VERCEL
+      # ===================================================================
+      - name: 2. Install Vercel CLI
+        run: npm install --global vercel
+
+      - name: 3. Deploy Project to Vercel and Capture URL
+        id: deploy_step
+        run: |
+          # The 'vercel --prod' command deploys to the main production URL.
+          # It outputs the live URL upon success. We capture this output.
+          # The VERCEL_ORG_ID and VERCEL_PROJECT_ID secrets tell the CLI which project to deploy.
+          DEPLOYMENT_URL=$(vercel --prod --token=${{ secrets.VERCEL_TOKEN }} --scope=${{ secrets.VERCEL_ORG_ID }})
+          
+          # Now, we set this captured URL as an output for the next step.
+          echo "DEPLOYMENT_URL=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+
+      # ===================================================================
+
+      - name: 4. Report Success to API
+        if: success()
+        run: |
+          # This step now sends the REAL deployment URL back to your backend.
+          curl --fail -v -X PATCH '${{ secrets.API_URL }}/api/projects/${{ secrets.PROJECT_ID }}/deployments/${{ github.event.inputs.deployment_id }}' \
           -H "Content-Type: application/json" \
           --data-raw '{
             "status": "success",
-            "deploymentUrl": "${{ steps.deploy_step.outputs.DEPLOYMENT_2. Install Vercel CLI
-        run: npm install --global vercel
-
-      - name: 3. DeployURL }}",
+            "deploymentUrl": "${{ steps.deploy_step.outputs.DEPLOYMENT_URL }}",
             "apiKey": "${{ secrets.ACTIONS_API_KEY }}"
           }'
 
-      - name Project to Vercel and Capture URL
-        id: deploy_step
-        run: |
-          # The: 5. Report Failure to API
+      - name: 5. Report Failure to API
         if: failure()
         run: |
           curl --fail -v -X PATCH '${{ secrets.API_URL }}/api/projects/${{ secrets.PROJECT_ID }}/deployments/${{ github.event.inputs.deployment_id }}' \
-          -H "Content '--yes' flag is added to auto-confirm the production deployment.
-          DEPLOYMENT_URL=$(vercel --prod --yes-Type: application/json" \
+          -H "Content-Type: application/json" \
           --data-raw '{
             "status": "failure",
             "apiKey": "${{ secrets.ACTIONS_API_KEY }}"

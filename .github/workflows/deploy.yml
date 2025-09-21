@@ -1,43 +1,63 @@
-name: MERN Platform Deployment Trigger
+# A descriptive name for your workflow
+name: Deploy ChatKaro via MERN Platform
 
+# Defines what triggers the workflow
 on:
   workflow_dispatch:
+    # These are the ONLY inputs this workflow expects from your backend.
     inputs:
-      target_cloud: # We still keep this for future logic
+      target_cloud: # Kept for consistency, though we only deploy to Vercel here
         required: true
       deployment_id:
+        description: 'The unique ID for this deployment record'
         required: true
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
+      # Step 1: Checks-out your repository's code
       - name: 1. Checkout repository code
         uses: actions/checkout@v4
 
-      # ===================================================================
-      #  THE SIMULATION IS REPLACED WITH A REAL DEPLOYMENT TO VERCEL
-      # ===================================================================
-      - name: 2. Install Vercel CLI
+      # Step 2: Set up the correct Node.js version for your project
+      - name: 2. Setup Node.js environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # Use the Node.js version your project requires
+
+      # Step 3: Install project dependencies
+      - name: 3. Install Dependencies
+        run: npm install
+
+      # Step 4: Build the production-ready application
+      # This creates an optimized 'dist' or 'build' folder.
+      - name: 4. Build Project
+        run: npm run build
+
+      # Step 5: Install the Vercel CLI
+      - name: 5. Install Vercel CLI
         run: npm install --global vercel
 
-      - name: 3. Deploy Project to Vercel and Capture URL
+      # Step 6: Deploy to Vercel and capture the real URL
+      - name: 6. Deploy to Vercel
         id: deploy_step
+        env:
+          # Set Vercel secrets as environment variables for the Vercel CLI
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
-          # The 'vercel --prod' command deploys to the main production URL.
-          # It outputs the live URL upon success. We capture this output.
-          # The VERCEL_ORG_ID and VERCEL_PROJECT_ID secrets tell the CLI which project to deploy.
-          DEPLOYMENT_URL=$(vercel --prod --token=${{ secrets.VERCEL_TOKEN }} --scope=${{ secrets.VERCEL_ORG_ID }})
-          
-          # Now, we set this captured URL as an output for the next step.
+          # The 'vercel --prod --yes' command deploys the project to production.
+          # The '--token' authenticates the command.
+          # We capture the output URL from the command.
+          DEPLOYMENT_URL=$(vercel deploy ./dist --prod --yes --token=${{ secrets.VERCEL_TOKEN }})
           echo "DEPLOYMENT_URL=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
-
-      # ===================================================================
-
-      - name: 4. Report Success to API
+      
+      # Step 7: Report the final status back to your MERN dashboard
+      - name: 7. Report Success to API
         if: success()
         run: |
-          # This step now sends the REAL deployment URL back to your backend.
+          # This step now sends the REAL Vercel URL back to your backend.
           curl --fail -v -X PATCH '${{ secrets.API_URL }}/api/projects/${{ secrets.PROJECT_ID }}/deployments/${{ github.event.inputs.deployment_id }}' \
           -H "Content-Type: application/json" \
           --data-raw '{
@@ -46,7 +66,7 @@ jobs:
             "apiKey": "${{ secrets.ACTIONS_API_KEY }}"
           }'
 
-      - name: 5. Report Failure to API
+      - name: 8. Report Failure to API
         if: failure()
         run: |
           curl --fail -v -X PATCH '${{ secrets.API_URL }}/api/projects/${{ secrets.PROJECT_ID }}/deployments/${{ github.event.inputs.deployment_id }}' \

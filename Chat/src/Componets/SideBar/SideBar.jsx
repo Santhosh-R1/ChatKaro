@@ -53,13 +53,17 @@ function SideBar() {
     <div className="sidebar">
       <div className="sidebar__header">
         <div className="sidebar__headerLeft">
-          <Avatar src={user?.photoURL} />
+          <div className="sidebar__avatarWrapper">
+            <Avatar src={user?.photoURL} className="sidebar__userAvatar" />
+            <span className="sidebar__onlinePulse"></span>
+          </div>
           <div className="sidebar__headerInfo">
-            <h4>{user?.displayName}</h4>
+            <h4>{user?.displayName || "Love Couple"}</h4>
+            <span className="sidebar__userStatus">In Love &amp; Connected</span>
           </div>
         </div>
         <div className="sidebar__headerRight">
-          <IconButton onClick={() => setIsModalOpen(true)} className="sidebar__logoutButton">
+          <IconButton onClick={() => setIsModalOpen(true)} className="sidebar__logoutButton" title="Logout">
             <LogoutIcon />
           </IconButton>
         </div>
@@ -67,10 +71,10 @@ function SideBar() {
 
       <div className="sidebar__search">
         <div className="sidebar__searchContainer">
-          <SearchOutlinedIcon />
+          <SearchOutlinedIcon className="sidebar__searchIcon" />
           <input
             type="text"
-            placeholder="Search or start new chat"
+            placeholder="Search chats &amp; memories..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />

@@ -23,24 +23,35 @@ const chatItemVariants = {
 };
 
 const dialogSx = {
+  "& .MuiBackdrop-root": {
+    backgroundColor: "rgba(12, 3, 18, 0.72)",
+    backdropFilter: "blur(12px)",
+  },
   "& .MuiDialog-paper": {
-    background: "rgba(30, 30, 45, 0.6)",
-    backdropFilter: "blur(15px)",
-    "-webkit-backdrop-filter": "blur(15px)",
-    boxShadow: "0 8px 32px 0 rgba(0, 0, 0, 0.37)",
-    border: "1px solid rgba(255, 255, 255, 0.18)",
-    borderRadius: "15px",
+    width: "90%",
+    maxWidth: "430px",
+    margin: "16px",
+    background: "rgba(32, 12, 44, 0.92)",
+    backdropFilter: "blur(25px) saturate(180%)",
+    "-webkit-backdrop-filter": "blur(25px) saturate(180%)",
+    boxShadow: "0 25px 65px rgba(6, 1, 14, 0.8), 0 0 35px rgba(247, 140, 160, 0.2)",
+    border: "1px solid rgba(247, 140, 160, 0.35)",
+    borderRadius: "26px",
     color: "#f1f1f1",
+    padding: "12px 6px",
+    overflow: "hidden",
   },
 };
 
 const textFieldSx = {
-  "& .MuiInputLabel-root": { color: "#c0c0c0" }, 
+  "& .MuiInputLabel-root": { color: "rgba(255, 215, 230, 0.7)" }, 
   "& .MuiInputLabel-root.Mui-focused": { color: "#f78ca0" },
   "& .MuiOutlinedInput-root": {
-    "& fieldset": { borderColor: "rgba(255, 255, 255, 0.3)" }, 
-    "&:hover fieldset": { borderColor: "rgba(255, 255, 255, 0.6)" }, 
-    "&.Mui-focused fieldset": { borderColor: "#f78ca0" }, 
+    borderRadius: "14px",
+    backgroundColor: "rgba(255, 255, 255, 0.04)",
+    "& fieldset": { borderColor: "rgba(247, 140, 160, 0.3)" }, 
+    "&:hover fieldset": { borderColor: "rgba(247, 140, 160, 0.6)" }, 
+    "&.Mui-focused fieldset": { borderColor: "#f78ca0", borderWidth: "2px" }, 
     "& .MuiOutlinedInput-input": { color: "#ffffff" }, 
   },
 };
@@ -97,23 +108,39 @@ function SidebarChat({ addNewChat, name, id, avatar, onDelete, onAddChat, creato
         <motion.div
           className="sidebarchat__addNew"
           onClick={() => setIsAddChatDialogOpen(true)}
-          whileHover={{ scale: 1.03, backgroundColor: "rgba(247, 140, 160, 0.2)" }}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
         >
-          <h2>Add New Pookie Chat</h2>
+          <div className="sidebarchat__addNewIcon">
+            <span>+</span>
+          </div>
+          <div className="sidebarchat__addNewText">
+            <h2>Add New HAIA Chat</h2>
+            <p>Start a new private couple room</p>
+          </div>
         </motion.div>
 
         <Dialog open={isAddChatDialogOpen} onClose={() => setIsAddChatDialogOpen(false)} sx={dialogSx}>
-          <DialogTitle>Create a new chat room</DialogTitle>
-          <DialogContent>
-            <DialogContentText sx={{ color: "#c0c0c0", mb: 2 }}>
-              Give your new Pookie-space a name.
+          <div className="cuteDialog__icon">
+            <span className="cuteDialog__iconMain">💖</span>
+            <span className="cuteDialog__iconSub">✨</span>
+          </div>
+          <DialogTitle className="cuteDialog__title">Create a Couple Room</DialogTitle>
+          <div className="cuteDialog__divider">
+            <span className="cuteDialog__dividerLine"></span>
+            <span className="cuteDialog__dividerHeart">♥</span>
+            <span className="cuteDialog__dividerLine"></span>
+          </div>
+          <DialogContent sx={{ px: "24px", pb: 0 }}>
+            <DialogContentText className="cuteDialog__text" sx={{ mb: 2 }}>
+              Give your romantic space a sweet name to start chatting with your love. 💌
             </DialogContentText>
-            <TextField autoFocus required margin="dense" label="Room Name" type="text" fullWidth variant="outlined" value={newRoomName} onChange={(e) => setNewRoomName(e.target.value)} sx={textFieldSx}/>
-            <TextField margin="dense" label="Avatar URL (Optional)" type="text" fullWidth variant="outlined" value={newRoomAvatar} onChange={(e) => setNewRoomAvatar(e.target.value)} sx={textFieldSx} />
+            <TextField autoFocus required margin="dense" label="Couple Room Name" placeholder="e.g. My Pookie & Me 💕" type="text" fullWidth variant="outlined" value={newRoomName} onChange={(e) => setNewRoomName(e.target.value)} sx={textFieldSx}/>
+            <TextField margin="dense" label="Avatar URL (Optional)" placeholder="https://..." type="text" fullWidth variant="outlined" value={newRoomAvatar} onChange={(e) => setNewRoomAvatar(e.target.value)} sx={{ ...textFieldSx, mt: 1.5 }} />
           </DialogContent>
-          <DialogActions sx={{ p: "16px 24px" }}>
-            <Button onClick={() => setIsAddChatDialogOpen(false)} sx={{ color: '#f1f1f1' }}>Cancel</Button>
-            <Button onClick={handleCreateChatConfirm} variant="contained" disabled={!newRoomName.trim()} sx={{ background: "linear-gradient(45deg, #f78ca0 0%, #f9748f 90%)" }}>Create</Button>
+          <DialogActions className="cuteDialog__actions">
+            <Button onClick={() => setIsAddChatDialogOpen(false)} className="cuteDialog__btnCancel">Cancel</Button>
+            <Button onClick={handleCreateChatConfirm} disabled={!newRoomName.trim()} className="cuteDialog__btnCreate">Create Room 💖</Button>
           </DialogActions>
         </Dialog>
       </>
@@ -132,30 +159,40 @@ function SidebarChat({ addNewChat, name, id, avatar, onDelete, onAddChat, creato
       transition={{ duration: 0.2 }}
     >
       <Link to={`/rooms/${id}`} className="sidebarchat__link">
-        <Avatar src={avatar} className="sidebarchat__avatar" />
+        <Avatar src={avatar || undefined} className="sidebarchat__avatar">
+          {name ? name.charAt(0).toUpperCase() : "♥"}
+        </Avatar>
         <div className="sidebarchat__info">
           <h2>{name}</h2>
+          <p className="sidebarchat__preview">♥ Tap to message</p>
         </div>
       </Link>
 
-      {isHovered && (
-        <motion.div initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }}>
-          <IconButton onClick={(e) => { e.preventDefault(); setOpenDeleteDialog(true); }} className="sidebarchat__deleteIcon" aria-label="delete">
-            <DeleteIcon />
-          </IconButton>
-        </motion.div>
-      )}
+      <div className="sidebarchat__deleteWrapper">
+        <IconButton onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpenDeleteDialog(true); }} className="sidebarchat__deleteIcon" aria-label="delete">
+          <DeleteIcon />
+        </IconButton>
+      </div>
 
       <Dialog open={openDeleteDialog} onClose={() => setOpenDeleteDialog(false)} sx={dialogSx}>
-        <DialogTitle>{"Delete this chat?"}</DialogTitle>
-        <DialogContent>
-          <DialogContentText sx={{ color: "#c0c0c0" }}>
-            Are you sure you want to delete "{name}"? This action cannot be undone.
+        <div className="cuteDialog__icon">
+          <span className="cuteDialog__iconMain">🥺</span>
+          <span className="cuteDialog__iconSub">💔</span>
+        </div>
+        <DialogTitle className="cuteDialog__title">Delete this love chat?</DialogTitle>
+        <div className="cuteDialog__divider">
+          <span className="cuteDialog__dividerLine"></span>
+          <span className="cuteDialog__dividerHeart">♥</span>
+          <span className="cuteDialog__dividerLine"></span>
+        </div>
+        <DialogContent sx={{ px: "24px", pb: 0 }}>
+          <DialogContentText className="cuteDialog__text">
+            Are you sure you want to remove <strong>"{name}"</strong>? All sweet messages and shared memories in this room will be gone forever. 🌸
           </DialogContentText>
         </DialogContent>
-        <DialogActions sx={{ justifyContent: 'center', p: '16px 24px' }}>
-          <Button onClick={() => setOpenDeleteDialog(false)} sx={{ color: '#f1f1f1' }}>Cancel</Button>
-          <Button onClick={handleDeleteConfirm} variant="contained" autoFocus sx={{ backgroundColor: '#ff4d6d', '&:hover': { backgroundColor: '#ff3355' } }}>Confirm Delete</Button>
+        <DialogActions className="cuteDialog__actions">
+          <Button onClick={() => setOpenDeleteDialog(false)} className="cuteDialog__btnCancel">Keep Memories 💕</Button>
+          <Button onClick={handleDeleteConfirm} className="cuteDialog__btnDelete">Delete Chat 💔</Button>
         </DialogActions>
       </Dialog>
     </motion.div>

@@ -10,6 +10,8 @@ const MessageSchema = new mongoose.Schema({
   fileUrl: { type: String },
   fileName: { type: String },
   audioUrl: { type: String },
+  cloudinaryPublicId: { type: String },
+  resourceType: { type: String },
   location: {
     lat: { type: Number },
     lon: { type: Number },

@@ -7,32 +7,41 @@ import {
 import { PlayArrow } from '@mui/icons-material';
 
 const dialogSx = {
+  "& .MuiBackdrop-root": {
+    backgroundColor: "rgba(12, 3, 18, 0.75)",
+    backdropFilter: "blur(12px)",
+  },
   "& .MuiDialog-paper": {
     fontFamily: '"Poppins", sans-serif',
     width: '90%',
-    maxWidth: '500px',
-    background: "rgba(44, 62, 80, 0.7)", 
-    backdropFilter: "blur(20px)",
-    "-webkit-backdrop-filter": "blur(20px)",
-    boxShadow: "0 8px 32px 0 rgba(0, 0, 0, 0.37)",
-    border: "1px solid rgba(255, 255, 255, 0.18)",
-    borderRadius: "18px", 
+    maxWidth: '480px',
+    background: "rgba(32, 12, 44, 0.94)", 
+    backdropFilter: "blur(25px) saturate(180%)",
+    "-webkit-backdrop-filter": "blur(25px) saturate(180%)",
+    boxShadow: "0 25px 65px rgba(6, 1, 14, 0.8), 0 0 35px rgba(247, 140, 160, 0.25)",
+    border: "1px solid rgba(247, 140, 160, 0.35)",
+    borderRadius: "26px", 
     color: "#f1f1f1",
+    padding: "12px 6px",
+    overflow: "hidden",
   },
 };
 
 const searchButtonSx = {
-  height: '56px',
+  height: '52px',
   alignSelf: 'center',
   fontWeight: '600',
   fontFamily: '"Poppins", sans-serif',
-  borderRadius: '12px',
-  background: 'linear-gradient(45deg, #f78ca0 30%, #b279a7 90%)',
-  boxShadow: '0 3px 5px 2px rgba(247, 140, 160, .3)',
-  transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+  borderRadius: '16px',
+  textTransform: 'none',
+  px: 3,
+  background: 'linear-gradient(135deg, #f78ca0 0%, #f9748f 100%)',
+  boxShadow: '0 4px 16px rgba(247, 140, 160, 0.4)',
+  transition: 'all 0.25s ease-in-out',
   '&:hover': {
-    transform: 'scale(1.05)',
-    boxShadow: '0 5px 10px 2px rgba(247, 140, 160, .4)',
+    transform: 'translateY(-2px)',
+    background: 'linear-gradient(135deg, #ff9a9e 0%, #f78ca0 100%)',
+    boxShadow: '0 6px 22px rgba(247, 140, 160, 0.6)',
   },
 };
 
@@ -99,21 +108,26 @@ function MusicSearchModal({ open, onClose, onSongSelect }) {
 
   return (
     <Dialog open={open} onClose={onClose} sx={dialogSx}> 
-      <DialogTitle sx={{ 
-        textAlign: 'center', 
-        fontWeight: '600', 
-        pb: 1, 
-        borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
-      }}>
-        Share a Pookie Tune
+      <div className="cuteDialog__icon">
+        <span className="cuteDialog__iconMain">🎵</span>
+        <span className="cuteDialog__iconSub">💕</span>
+      </div>
+      <DialogTitle className="cuteDialog__title">
+        Share a Romantic Tune
       </DialogTitle>
+      <div className="cuteDialog__divider">
+        <span className="cuteDialog__dividerLine"></span>
+        <span className="cuteDialog__dividerHeart">♥</span>
+        <span className="cuteDialog__dividerLine"></span>
+      </div>
 
-      <DialogContent sx={{ pt: '20px !important' }}>
+      <DialogContent sx={{ px: '20px', pt: '8px !important' }}>
         <Box component="form" onSubmit={handleSearch} sx={{ display: 'flex', gap: 1.5, mb: 2 }}>
            <TextField
             autoFocus
             margin="dense"
             label="Search songs or artists..."
+            placeholder="e.g. Love, Romantic, Chill..."
             type="text"
             fullWidth
             variant="outlined"
@@ -121,16 +135,17 @@ function MusicSearchModal({ open, onClose, onSongSelect }) {
             onChange={(e) => setQuery(e.target.value)}
             sx={{
               '& .MuiInputBase-root': {
-                borderRadius: '12px',
+                borderRadius: '16px',
+                backgroundColor: 'rgba(255, 255, 255, 0.04)',
               },
               '& label.Mui-focused': { color: '#f78ca0' },
               '& .MuiOutlinedInput-root': {
-                '& fieldset': { borderColor: 'rgba(255, 255, 255, 0.23)' },
-                '&:hover fieldset': { borderColor: 'rgba(255, 255, 255, 0.5)' },
-                '&.Mui-focused fieldset': { borderColor: '#f78ca0' },
+                '& fieldset': { borderColor: 'rgba(247, 140, 160, 0.3)' },
+                '&:hover fieldset': { borderColor: 'rgba(247, 140, 160, 0.6)' },
+                '&.Mui-focused fieldset': { borderColor: '#f78ca0', borderWidth: '2px' },
               },
-              input: { color: '#f1f1f1' },
-              label: { color: '#b1b3b5' },
+              input: { color: '#ffffff' },
+              label: { color: 'rgba(255, 215, 230, 0.7)' },
             }}
           />
           <Button type="submit" variant="contained" disabled={loading} sx={searchButtonSx}>
@@ -139,21 +154,21 @@ function MusicSearchModal({ open, onClose, onSongSelect }) {
         </Box>
 
         {loading && (
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', my: 3, gap: 1 }}>
-            <CircularProgress color="inherit" />
-            <Typography sx={{ color: '#b1b3b5' }}>Finding tunes...</Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', my: 4, gap: 1.5 }}>
+            <CircularProgress sx={{ color: '#f78ca0' }} size={36} />
+            <Typography sx={{ color: 'rgba(255, 230, 240, 0.75)', fontSize: '0.9rem' }}>Finding romantic tunes for you two... 💕</Typography>
           </Box>
         )}
         
-        {error && !loading && <Typography align="center" sx={{ color: '#ff7b7b', my: 2 }}>{error}</Typography>}
+        {error && !loading && <Typography align="center" sx={{ color: '#ff758c', my: 2 }}>{error}</Typography>}
 
         {!loading && !error && results.length > 0 && (
-            <Typography sx={{ color: '#b1b3b5', mb: 1, fontWeight: '600' }}>
-              {query ? 'Search Results' : 'Popular Songs'}
+            <Typography sx={{ color: '#f78ca0', mb: 1, fontWeight: '600', fontSize: '0.85rem', letterSpacing: '0.5px' }}>
+              {query ? 'SEARCH RESULTS' : 'POPULAR ROMANTIC SONGS'}
             </Typography>
         )}
 
-        <List sx={{ maxHeight: '45vh', overflowY: 'auto', pr: 1 }}>
+        <List sx={{ maxHeight: '42vh', overflowY: 'auto', pr: 0.5, '&::-webkit-scrollbar': { width: '5px' }, '&::-webkit-scrollbar-thumb': { backgroundColor: 'rgba(247, 140, 160, 0.3)', borderRadius: '3px' } }}>
           {results.map((song) => {
             const imageUrl = song.album.images?.[0]?.url || '';
             const artists = song.artists.map(artist => artist.name).join(', ') || 'Unknown Artist';
@@ -162,28 +177,41 @@ function MusicSearchModal({ open, onClose, onSongSelect }) {
                 key={song.id}
                 secondaryAction={
                   <IconButton edge="end" aria-label="play" onClick={() => handleSelect(song)} sx={{ 
-                    color: '#1DB954', 
-                    '&:hover': { backgroundColor: 'rgba(29, 185, 84, 0.1)' } 
+                    color: '#ffffff',
+                    background: 'linear-gradient(135deg, #f78ca0 0%, #f9748f 100%)',
+                    width: '38px',
+                    height: '38px',
+                    boxShadow: '0 4px 12px rgba(247, 140, 160, 0.4)',
+                    transition: 'all 0.2s ease',
+                    '&:hover': { 
+                      background: 'linear-gradient(135deg, #ff9a9e 0%, #f78ca0 100%)',
+                      transform: 'scale(1.1)' 
+                    } 
                   }}>
-                      <PlayArrow />
+                      <PlayArrow sx={{ fontSize: '20px' }} />
                   </IconButton>
                 }
                 sx={{
                   mb: 1,
-                  borderRadius: '12px',
-                  transition: 'background-color 0.2s ease-in-out',
+                  borderRadius: '16px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                  border: '1px solid rgba(255, 255, 255, 0.06)',
+                  transition: 'all 0.25s ease-in-out',
+                  padding: '8px 12px',
                   '&:hover': {
-                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                    backgroundColor: 'rgba(247, 140, 160, 0.12)',
+                    borderColor: 'rgba(247, 140, 160, 0.35)',
+                    transform: 'translateX(3px)',
                   },
                 }}
               >
                 <ListItemAvatar>
-                  <Avatar variant="rounded" src={imageUrl} sx={{ width: 48, height: 48, borderRadius: '8px' }} />
+                  <Avatar variant="rounded" src={imageUrl} sx={{ width: 46, height: 46, borderRadius: '12px', border: '1.5px solid rgba(247, 140, 160, 0.4)' }} />
                 </ListItemAvatar>
                 <ListItemText
-                  primaryTypographyProps={{ style: { fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } }}
+                  primaryTypographyProps={{ style: { fontWeight: '600', fontSize: '0.92rem', color: '#ffffff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } }}
                   primary={song.name}
-                  secondary={<span style={{color: '#b1b3b5'}}>{artists}</span>}
+                  secondary={<span style={{ color: 'rgba(255, 215, 230, 0.65)', fontSize: '0.8rem' }}>{artists}</span>}
                 />
               </ListItem>
             );

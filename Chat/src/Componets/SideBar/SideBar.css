@@ -5,34 +5,65 @@
   min-width: 300px;
   max-width: 400px;
   height: 100%;
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(30, 14, 40, 0.45);
 }
 
 .sidebar__header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 16px;
-  height: 60px;
-  background-color: rgba(255, 255, 255, 0.05);
+  padding: 12px 18px;
+  height: 68px;
+  box-sizing: border-box;
+  background-color: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .sidebar__headerLeft {
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 12px;
 }
 
-.sidebar__headerLeft > .MuiAvatar-root {
-  border: 2px solid rgba(255, 175, 204, 0.7);
-  box-shadow: 0 0 10px rgba(247, 140, 160, 0.3);
+.sidebar__avatarWrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.sidebar__userAvatar {
+  width: 44px !important;
+  height: 44px !important;
+  border: 2px solid rgba(247, 140, 160, 0.8) !important;
+  box-shadow: 0 0 14px rgba(247, 140, 160, 0.45) !important;
+}
+
+.sidebar__onlinePulse {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 10px;
+  height: 10px;
+  background-color: #25d366;
+  border-radius: 50%;
+  border: 2px solid #231030;
+  box-shadow: 0 0 6px #25d366;
 }
 
 .sidebar__headerInfo > h4 {
   margin: 0;
   font-weight: 600;
-  font-size: 16px;
-  color: #f1f1f1;
+  font-size: 15px;
+  color: #ffffff;
+  letter-spacing: 0.3px;
+}
+
+.sidebar__userStatus {
+  display: block;
+  font-size: 11px;
+  color: rgba(247, 140, 160, 0.85);
+  font-weight: 400;
+  margin-top: 2px;
 }
 
 .sidebar__headerRight {
@@ -41,35 +72,47 @@
 }
 
 .sidebar__logoutButton {
-  color: #f78ca0 !important; 
+  color: rgba(247, 140, 160, 0.85) !important;
+  background-color: rgba(247, 140, 160, 0.08) !important;
+  border-radius: 12px !important;
+  padding: 8px !important;
   transition: all 0.3s ease !important;
 }
 
 .sidebar__logoutButton:hover {
-  background-color: rgba(247, 140, 160, 0.2) !important;
-  transform: scale(1.1);
+  background-color: rgba(247, 140, 160, 0.25) !important;
+  color: #ff5e7e !important;
+  transform: scale(1.08);
 }
 
 .sidebar__search {
   display: flex;
   align-items: center;
-  background-color: rgba(0, 0, 0, 0.1);
-  padding: 8px 15px;
+  padding: 10px 14px;
 }
 
 .sidebar__searchContainer {
   display: flex;
   align-items: center;
-  background-color: rgba(255, 255, 255, 0.08);
+  background-color: rgba(255, 255, 255, 0.06);
   width: 100%;
-  height: 40px;
-  border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  height: 42px;
+  border-radius: 21px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 0 14px;
+  transition: all 0.25s ease;
 }
 
-.sidebar__searchContainer > .MuiSvgIcon-root {
-  color: #c0c0c0;
-  padding: 10px;
+.sidebar__searchContainer:focus-within {
+  border-color: rgba(247, 140, 160, 0.55);
+  background-color: rgba(255, 255, 255, 0.09);
+  box-shadow: 0 0 12px rgba(247, 140, 160, 0.2);
+}
+
+.sidebar__searchIcon {
+  color: rgba(247, 140, 160, 0.7) !important;
+  font-size: 20px !important;
+  margin-right: 8px;
 }
 
 .sidebar__searchContainer > input {
@@ -77,23 +120,24 @@
   outline: none;
   background: transparent;
   width: 100%;
-  color: #f1f1f1;
+  color: #ffffff;
   font-family: "Poppins", sans-serif;
-  font-size: 14px;
+  font-size: 13.5px;
 }
 
 .sidebar__searchContainer > input::placeholder {
-  color: #a0a0a0;
-  opacity: 1;
+  color: rgba(255, 230, 240, 0.45);
+  font-size: 13px;
 }
 
 .sidebar__chats {
   flex: 1;
   overflow-y: auto;
+  padding: 4px 6px;
 }
 
 .sidebar__chats::-webkit-scrollbar {
-  width: 6px;
+  width: 5px;
 }
 
 .sidebar__chats::-webkit-scrollbar-track {
@@ -101,10 +145,50 @@
 }
 
 .sidebar__chats::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(247, 140, 160, 0.2);
   border-radius: 10px;
 }
 
 .sidebar__chats::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.4);
+  background: rgba(247, 140, 160, 0.4);
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    flex: 1;
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
+    border-right: none;
+  }
+
+  .sidebar__header {
+    padding: 10px 14px;
+    height: 60px;
+  }
+
+  .sidebar__userAvatar {
+    width: 40px !important;
+    height: 40px !important;
+  }
+
+  .sidebar__headerInfo > h4 {
+    font-size: 14.5px;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sidebar__search {
+    padding: 8px 12px;
+  }
+
+  .sidebar__searchContainer {
+    height: 40px;
+  }
+
+  .sidebar__searchContainer > input {
+    font-size: 14px;
+  }
 }

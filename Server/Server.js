@@ -1,4 +1,11 @@
 // server.js
+try {
+    if (typeof process.loadEnvFile === 'function') {
+        process.loadEnvFile();
+    }
+} catch (e) {
+    // .env file optional or not found
+}
 
 const express = require('express');
 const mongoose = require('mongoose');
@@ -28,21 +35,23 @@ app.use(cors());
 app.use(bodyParser.json());
 
 cloudinary.config({
-  cloud_name: 'dpwx76ub2',
-  api_key: '651975388482573',
-  api_secret: '-KRk9RFBKRNWPpMMdDogCkGN3i8',
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME ,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
   secure: true
 });
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
-const dbUrl = "mongodb+srv://santhoshrajan817:Santhosh007@whatsapp.vb52t.mongodb.net/whatsapp";
-mongoose.connect(dbUrl);
-const db = mongoose.connection;
-db.once("open", () => {
-    console.log("DB connected");
-});
+const dbUrl = process.env.MONGODB_URL ;
+mongoose.connect(dbUrl)
+    .then(() => {
+        console.log("DB connected");
+    })
+    .catch((err) => {
+        console.error("MongoDB connection error:", err.message);
+    });
 
 app.get("/", (req, res) => {
     res.send("Hello from the PookieGram API Server!");
@@ -58,7 +67,10 @@ app.post("/group/create", (req, res) => {
 
     room.save()
         .then((result) => res.status(201).json({ data: result }))
-        .catch((err) => res.status(500).json({ message: "Error creating room" }));
+        .catch((err) => {
+            console.error("Error creating room:", err);
+            res.status(500).json({ message: "Error creating room", error: err.message });
+        });
 });
 
 app.get("/all/rooms", (req, res) => {
@@ -76,14 +88,98 @@ app.get("/room/:id", (req, res) => {
         .catch((err) => res.status(500).send("Internal Server Error"));
 });
 
+// Helper to parse Cloudinary URL for publicId and resourceType
+const extractCloudinaryInfo = (url) => {
+    if (!url || typeof url !== 'string' || !url.includes('cloudinary.com')) return null;
+    try {
+        const parts = url.split('/upload/');
+        if (parts.length < 2) return null;
+
+        let resourceType = 'image';
+        if (parts[0].includes('/video')) resourceType = 'video';
+        else if (parts[0].includes('/raw')) resourceType = 'raw';
+
+        let pathAfterUpload = parts[1];
+        // Strip version if present (e.g. v123456789/)
+        pathAfterUpload = pathAfterUpload.replace(/^v\d+\//, '');
+
+        let publicId = pathAfterUpload;
+        if (resourceType !== 'raw') {
+            publicId = pathAfterUpload.replace(/\.[^/.]+$/, '');
+        }
+
+        return { publicId: decodeURIComponent(publicId), resourceType };
+    } catch (e) {
+        return null;
+    }
+};
+
+// Helper to destroy an asset in Cloudinary safely
+const deleteCloudinaryAsset = async (publicId, resourceType = 'image') => {
+    if (!publicId) return;
+    try {
+        const res = await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
+        if (res && res.result === 'not found' && resourceType === 'image') {
+            await cloudinary.uploader.destroy(publicId, { resource_type: 'raw' });
+            await cloudinary.uploader.destroy(publicId, { resource_type: 'video' });
+        }
+    } catch (err) {
+        console.error(`Error deleting Cloudinary asset (${publicId}):`, err.message || err);
+    }
+};
+
+// Helper to delete all attached files for a list of messages
+const deleteMessageFilesFromCloudinary = async (messages) => {
+    if (!Array.isArray(messages)) messages = [messages];
+    const deletePromises = [];
+
+    for (const msg of messages) {
+        if (!msg) continue;
+        let publicId = msg.cloudinaryPublicId;
+        let resourceType = msg.resourceType;
+
+        if (!publicId) {
+            const urlInfo = extractCloudinaryInfo(msg.fileUrl || msg.audioUrl);
+            if (urlInfo) {
+                publicId = urlInfo.publicId;
+                resourceType = urlInfo.resourceType;
+            }
+        }
+
+        if (publicId) {
+            deletePromises.push(deleteCloudinaryAsset(publicId, resourceType || 'image'));
+        }
+    }
+
+    await Promise.allSettled(deletePromises);
+};
+
 app.delete("/room/delete/:roomId", async (req, res) => {
     const { roomId } = req.params;
     if (!mongoose.Types.ObjectId.isValid(roomId)) return res.status(400).send("Invalid Room ID format.");
     try {
-        const deletedRoom = await Rooms.findByIdAndDelete(roomId);
-        if (!deletedRoom) return res.status(404).send({ message: "Room not found." });
+        const room = await Rooms.findById(roomId);
+        if (!room) return res.status(404).send({ message: "Room not found." });
+
+        // 1. Find all messages in this room and delete their uploaded files from Cloudinary
+        const messages = await Message.find({ roomId: roomId });
+        await deleteMessageFilesFromCloudinary(messages);
+
+        // 2. If room avatar is stored on Cloudinary, delete it as well
+        if (room.avatar) {
+            const avatarInfo = extractCloudinaryInfo(room.avatar);
+            if (avatarInfo) {
+                await deleteCloudinaryAsset(avatarInfo.publicId, avatarInfo.resourceType || 'image');
+            }
+        }
+
+        // 3. Delete all room messages from database
         await Message.deleteMany({ roomId: roomId });
-        res.status(200).send({ message: `Room '${deletedRoom.name}' and all its messages have been deleted.` });
+
+        // 4. Delete the room from database
+        await Rooms.findByIdAndDelete(roomId);
+
+        res.status(200).send({ message: `Room '${room.name}', its messages, and all Cloudinary files have been deleted.` });
     } catch (err) {
         console.error("Error deleting room:", err);
         res.status(500).send("Error deleting room.");
@@ -113,19 +209,35 @@ app.post("/messages/new", (req, res) => {
         });
 });
 
-app.delete("/messages/clear/:roomId", (req, res) => {
-    Message.deleteMany({ roomId: req.params.roomId })
-        .then(result => res.status(200).send({ message: `Successfully cleared ${result.deletedCount} messages.` }))
-        .catch(err => res.status(500).send("Error clearing chat."));
+app.delete("/messages/clear/:roomId", async (req, res) => {
+    try {
+        const messages = await Message.find({ roomId: req.params.roomId });
+        await deleteMessageFilesFromCloudinary(messages);
+
+        const result = await Message.deleteMany({ roomId: req.params.roomId });
+        res.status(200).send({ message: `Successfully cleared ${result.deletedCount} messages and deleted associated files.` });
+    } catch (err) {
+        console.error("Error clearing chat:", err);
+        res.status(500).send("Error clearing chat.");
+    }
 });
 
-app.delete("/messages/delete/:messageId", (req, res) => {
-    Message.findByIdAndDelete(req.params.messageId)
-        .then(result => {
-            if (!result) return res.status(404).send({ message: "Message not found." });
-            res.status(200).send({ message: `Message ${req.params.messageId} deleted successfully.` });
-        })
-        .catch(err => res.status(500).send("Error deleting message."));
+app.delete("/messages/delete/:messageId", async (req, res) => {
+    try {
+        const message = await Message.findById(req.params.messageId);
+        if (!message) return res.status(404).send({ message: "Message not found." });
+
+        // Delete file from Cloudinary if attached
+        await deleteMessageFilesFromCloudinary([message]);
+
+        // Delete from database
+        await Message.findByIdAndDelete(req.params.messageId);
+
+        res.status(200).send({ message: `Message ${req.params.messageId} and associated Cloudinary file deleted successfully.` });
+    } catch (err) {
+        console.error("Error deleting message:", err);
+        res.status(500).send("Error deleting message.");
+    }
 });
 
 const handleFileUpload = (req, res, resourceType, messageDataField) => {
@@ -137,9 +249,13 @@ const handleFileUpload = (req, res, resourceType, messageDataField) => {
     readableStream.push(req.file.buffer);
     readableStream.push(null);
 
-    const uploadOptions = { resource_type: resourceType };
-    if (resourceType !== 'video') { 
-        uploadOptions.public_id = req.file.originalname;
+    const uploadOptions = { 
+        resource_type: resourceType,
+        use_filename: true,
+        unique_filename: true
+    };
+    if (process.env.CLOUDINARY_UPLOAD_PRESET) {
+        uploadOptions.upload_preset = process.env.CLOUDINARY_UPLOAD_PRESET;
     }
 
     const uploadStream = cloudinary.uploader.upload_stream(uploadOptions, async (error, result) => {
@@ -150,7 +266,9 @@ const handleFileUpload = (req, res, resourceType, messageDataField) => {
         
         const messageBody = {
             ...req.body,
-            [messageDataField]: result.secure_url
+            [messageDataField]: result.secure_url,
+            cloudinaryPublicId: result.public_id,
+            resourceType: result.resource_type || resourceType
         };
         
         if (messageDataField === 'fileUrl') {

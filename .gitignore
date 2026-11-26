@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+Chat/node_modules/
+Server/node_modules/
+
+# Production build
+dist/
+Chat/dist/
+build/
+
+# Environment variables & secrets
+.env
+Server/.env
+Chat/.env
+*.env.local
+
+# Uploads
+Server/uploads/*
+!Server/uploads/.gitkeep
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# OS / Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

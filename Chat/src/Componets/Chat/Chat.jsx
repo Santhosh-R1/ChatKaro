@@ -2,13 +2,13 @@
 import React, { useEffect, useState, useRef } from "react";
 import "./Chat.css";
 import { Avatar, IconButton } from "@mui/material";
-import { SearchOutlined, AttachFile, MoreVert, InsertEmoticon, Mic, Send, StopCircle, Close, Photo, Description, LocationOn, DeleteForever, MusicNote, Pause, PlayArrow, Stop, Videocam, CallEnd, Phone, PhoneDisabled } from "@mui/icons-material";
+import { SearchOutlined, AttachFile, MoreVert, InsertEmoticon, Mic, Send, StopCircle, Close, Photo, Description, LocationOn, DeleteForever, MusicNote, Pause, PlayArrow, Stop, Videocam, CallEnd, Phone, PhoneDisabled, ArrowBack } from "@mui/icons-material";
 import { useStateValue } from "../ContextApi/StateProvider";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useReactMediaRecorder } from "react-media-recorder";
 import Picker from "emoji-picker-react";
-import WelcomeLogo from "../../Assets/pookie.png";
+import WelcomeLogo from "../../Assets/haia_emblem.svg";
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
@@ -22,9 +22,111 @@ import io from "socket.io-client";
 
 const socket = io("http://localhost:5000"); 
 
-const dialogSx = { "& .MuiDialog-paper": { background: "rgba(30, 30, 45, 0.6)", backdropFilter: "blur(15px)", boxShadow: "0 8px 32px 0 rgba(0, 0, 0, 0.37)", border: "1px solid rgba(255, 255, 255, 0.18)", borderRadius: "15px", color: "#f1f1f1" } };
+const dialogSx = {
+  "& .MuiBackdrop-root": {
+    backgroundColor: "rgba(12, 3, 18, 0.72)",
+    backdropFilter: "blur(12px)",
+  },
+  "& .MuiDialog-paper": {
+    width: "90%",
+    maxWidth: "430px",
+    margin: "16px",
+    background: "rgba(32, 12, 44, 0.92)",
+    backdropFilter: "blur(25px) saturate(180%)",
+    "-webkit-backdrop-filter": "blur(25px) saturate(180%)",
+    boxShadow: "0 25px 65px rgba(6, 1, 14, 0.8), 0 0 35px rgba(247, 140, 160, 0.2)",
+    border: "1px solid rgba(247, 140, 160, 0.35)",
+    borderRadius: "26px",
+    color: "#f1f1f1",
+    padding: "12px 6px",
+    overflow: "hidden",
+  },
+};
+
+function CuteVoiceNote({ src, isReceiver }) {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const audioRef = useRef(null);
+
+  const togglePlay = (e) => {
+    e.stopPropagation();
+    if (!audioRef.current) return;
+    if (isPlaying) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    } else {
+      audioRef.current.play().then(() => setIsPlaying(true)).catch((err) => console.log(err));
+    }
+  };
+
+  const onTimeUpdate = () => {
+    if (!audioRef.current) return;
+    const cur = audioRef.current.currentTime;
+    const dur = audioRef.current.duration || 1;
+    setProgress((cur / dur) * 100);
+  };
+
+  const onLoadedMetadata = () => {
+    if (audioRef.current) {
+      setDuration(audioRef.current.duration);
+    }
+  };
+
+  const onEnded = () => {
+    setIsPlaying(false);
+    setProgress(0);
+  };
+
+  const formatTime = (secs) => {
+    if (!secs || isNaN(secs)) return "0:00";
+    const m = Math.floor(secs / 60);
+    const s = Math.floor(secs % 60);
+    return `${m}:${s < 10 ? "0" : ""}${s}`;
+  };
+
+  const waves = [40, 70, 95, 55, 85, 100, 65, 90, 45, 80, 65, 85, 50, 90, 100, 60, 40];
+
+  return (
+    <div className={`cuteVoiceNote ${isReceiver ? "cuteVoiceNote--receiver" : "cuteVoiceNote--sender"}`}>
+      <audio
+        ref={audioRef}
+        src={src}
+        onTimeUpdate={onTimeUpdate}
+        onLoadedMetadata={onLoadedMetadata}
+        onEnded={onEnded}
+        preload="metadata"
+      />
+      <button type="button" className="cuteVoiceNote__playBtn" onClick={togglePlay} title={isPlaying ? "Pause" : "Play"}>
+        {isPlaying ? <Pause sx={{ fontSize: 18 }} /> : <PlayArrow sx={{ fontSize: 18 }} />}
+      </button>
+      <div className="cuteVoiceNote__content">
+        <div className="cuteVoiceNote__waves">
+          {waves.map((h, i) => (
+            <span
+              key={i}
+              className={`cuteVoiceNote__waveBar ${isPlaying ? "cuteVoiceNote__waveBar--playing" : ""}`}
+              style={{
+                height: `${h}%`,
+                animationDelay: `${(i % 6) * 0.12}s`,
+                opacity: (i / (waves.length - 1)) * 100 <= progress ? 1 : 0.45,
+              }}
+            />
+          ))}
+        </div>
+        <div className="cuteVoiceNote__meta">
+          <span className="cuteVoiceNote__time">
+            {isPlaying ? formatTime(audioRef.current?.currentTime) : formatTime(duration)}
+          </span>
+          <span className="cuteVoiceNote__badge">Voice Note 💕</span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function Chat() {
+  const navigate = useNavigate();
   const [input, setInput] = useState("");
   const [roomMembers, setRoomMembers] = useState([]);
   const [roomName, setRoomName] = useState("");
@@ -187,9 +289,74 @@ function Chat() {
   const formatTimestamp = (isoDate) => !isoDate ? "" : new Date(isoDate).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true, });
   const formatDate = (isoDate) => { if (!isoDate) return ""; const d = new Date(isoDate); return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`; };
   const filteredMessages = messages.filter((msg) => (!searchQuery ? true : (msg.message?.toLowerCase() || "").includes(searchQuery.toLowerCase()) || (msg.fileName?.toLowerCase() || "").includes(searchQuery.toLowerCase())));
-  const renderMessageContent = (message) => { switch (message.messageType) { case "audio": return <audio src={message.audioUrl} controls className="chat__audioPlayer" />; case "image": return (<div className="chat__mediaContainer"><img src={message.fileUrl} alt={message.fileName || "Sent image"} className="chat__mediaImage" />{message.message && <p className="chat__mediaCaption">{message.message}</p>}</div>); case "video": return (<div className="chat__mediaContainer"><video src={message.fileUrl} controls className="chat__mediaVideo" />{message.message && <p className="chat__mediaCaption">{message.message}</p>}</div>); case "document": return (<a href={message.fileUrl} target="_blank" rel="noopener noreferrer" className="chat__documentLink"><div className="chat__documentIcon"><Description /></div><div className="chat__documentInfo"><span>{message.fileName}</span><small>Document</small></div></a>); case "location": return message.location ? (<a href={`https://www.google.com/maps?q=${message.location.lat},${message.location.lon}`} target="_blank" rel="noopener noreferrer" className="chat__locationLink"><div className="chat__locationIcon"><LocationOn /></div><div className="chat__locationInfo"><span>Shared Location</span><small>View on Google Maps</small></div></a>) : (<div className="chat__text">Invalid location data</div>); default: return <div className="chat__text">{message.message}</div>; } };
+  const renderMessageContent = (message) => {
+    switch (message.messageType) {
+      case "audio":
+        return <CuteVoiceNote src={message.audioUrl} isReceiver={message.uid === user?.uid} />;
+      case "image":
+        return (
+          <div className="chat__mediaContainer">
+            <img src={message.fileUrl} alt={message.fileName || "Sent image"} className="chat__mediaImage" />
+            {message.message && <p className="chat__mediaCaption">{message.message}</p>}
+          </div>
+        );
+      case "video":
+        return (
+          <div className="chat__mediaContainer">
+            <video src={message.fileUrl} controls className="chat__mediaVideo" />
+            {message.message && <p className="chat__mediaCaption">{message.message}</p>}
+          </div>
+        );
+      case "document":
+        return (
+          <a href={message.fileUrl} target="_blank" rel="noopener noreferrer" className="chat__documentLink">
+            <div className="chat__documentIcon"><Description /></div>
+            <div className="chat__documentInfo">
+              <span>{message.fileName}</span>
+              <small>Document 📎</small>
+            </div>
+          </a>
+        );
+      case "location":
+        return message.location ? (
+          <a href={`https://www.google.com/maps?q=${message.location.lat},${message.location.lon}`} target="_blank" rel="noopener noreferrer" className="chat__locationLink">
+            <div className="chat__locationIcon"><LocationOn /></div>
+            <div className="chat__locationInfo">
+              <span>Shared Location 📍</span>
+              <small>Tap to open in Google Maps</small>
+            </div>
+          </a>
+        ) : (
+          <div className="chat__text">Invalid location data</div>
+        );
+      default: {
+        const text = message.message || "";
+        const isEmojiOnly = /^(\p{Emoji_Presentation}|\p{Extended_Pictographic}|\s)+$/u.test(text.trim()) && text.trim().length <= 8;
+        return <div className={`chat__text ${isEmojiOnly ? "chat__text--emojiOnly" : ""}`}>{text}</div>;
+      }
+    }
+  };
 
-  if (!roomId) return ( <div className="chat chat__welcome"><img src={WelcomeLogo} alt="Welcome to Pookie Gram" /><h1>POOKIE-GRAM</h1><p>Select a chat to start messaging with your favorite pookies.</p></div> );
+  if (!roomId) return (
+    <div className="chat chat__welcome">
+      <div className="chat__welcomeCard">
+        <div className="chat__welcomeEmblemWrapper">
+          <img src={WelcomeLogo} alt="HAIA Couple" className="chat__welcomeEmblem" />
+        </div>
+        <h1 className="chat__welcomeTitle">HAIA</h1>
+        <div className="chat__welcomeDivider">
+          <span className="chat__welcomeDividerLine"></span>
+          <span className="chat__welcomeDividerHeart">♥</span>
+          <span className="chat__welcomeDividerLine"></span>
+        </div>
+        <p className="chat__welcomeTagline">A Sanctuary for Two</p>
+        <p className="chat__welcomeSubtitle">Select a conversation from the left or start a new love chat to begin messaging.</p>
+        <div className="chat__welcomeQuote">
+          <span>“Every love story is beautiful, but ours is my favorite.”</span>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="chat">
@@ -228,6 +395,9 @@ function Chat() {
         <>
           <audio ref={audioRef} style={{ display: "none" }} onEnded={stopSharedSong} />
           <div className="chat__header">
+            <IconButton className="chat__backButton" onClick={() => navigate("/")} aria-label="Back to chats">
+              <ArrowBack />
+            </IconButton>
             <Avatar src={roomAvatar} />
             {showSearch ? (
               <motion.div className="chat__searchContainer" initial={{ width: 0, opacity: 0 }} animate={{ width: "100%", opacity: 1 }}>
@@ -265,7 +435,7 @@ function Chat() {
                   <motion.div layout key={message._id} className={`chat__message ${message.uid === user.uid && "chat__receiver"}`} initial={{ opacity: 0, y: 20, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} transition={{ duration: 0.3, ease: "easeOut" }} onDoubleClick={() => message.uid === user.uid && setMessageToDeleteId(message._id)}>
                     <AnimatePresence>{messageToDeleteId === message._id && (<motion.div className="chat__messageDelete" onClick={() => handleDeleteMessage(message._id)} initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.5 }}><DeleteForever /></motion.div>)}</AnimatePresence>
                     {message.uid !== user.uid && <span className="chat__name">{message.name}</span>}
-                    <div className="chat__messageContent">{renderMessageContent(message)}<span className="chat__timestamp">{formatTimestamp(message.timestamp)}</span></div>
+                    <div className="chat__messageContent">{renderMessageContent(message)}<span className="chat__timestamp">♥ {formatTimestamp(message.timestamp)}</span></div>
                   </motion.div>
                 ))}
               </AnimatePresence>
@@ -282,9 +452,25 @@ function Chat() {
 
       <MusicSearchModal open={isMusicModalOpen} onClose={() => setIsMusicModalOpen(false)} onSongSelect={handleSelectSong} />
       <Dialog open={isClearChatDialogOpen} onClose={handleCloseClearDialog} sx={dialogSx}>
-        <DialogTitle>{"Clear all messages in this chat?"}</DialogTitle>
-        <DialogContent><DialogContentText sx={{ color: "#c0c0c0" }}>Are you sure you want to permanently delete all messages in "{roomName}"? This action cannot be undone.</DialogContentText></DialogContent>
-        <DialogActions sx={{ justifyContent: 'center', p: '16px 24px' }}><Button onClick={handleCloseClearDialog} sx={{ color: '#f1f1f1' }}>Cancel</Button><Button onClick={handleConfirmClearChat} variant="contained" autoFocus sx={{ backgroundColor: '#ff4d6d', '&:hover': { backgroundColor: '#ff3355' } }}>Clear Chat</Button></DialogActions>
+        <div className="cuteDialog__icon">
+          <span className="cuteDialog__iconMain">🥺</span>
+          <span className="cuteDialog__iconSub">🧹</span>
+        </div>
+        <DialogTitle className="cuteDialog__title">Clear sweet memories?</DialogTitle>
+        <div className="cuteDialog__divider">
+          <span className="cuteDialog__dividerLine"></span>
+          <span className="cuteDialog__dividerHeart">♥</span>
+          <span className="cuteDialog__dividerLine"></span>
+        </div>
+        <DialogContent sx={{ px: "24px", pb: 0 }}>
+          <DialogContentText className="cuteDialog__text">
+            Are you sure you want to permanently delete all messages in <strong>"{roomName}"</strong>? You'll be starting a fresh blank page of love. 💌
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions className="cuteDialog__actions">
+          <Button onClick={handleCloseClearDialog} className="cuteDialog__btnCancel">Keep Chat 💕</Button>
+          <Button onClick={handleConfirmClearChat} className="cuteDialog__btnDelete">Clear Chat 🧹</Button>
+        </DialogActions>
       </Dialog>
     </div>
   );

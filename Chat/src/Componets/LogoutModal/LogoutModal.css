@@ -1,65 +1,214 @@
-.modal__overlay {
+/* Cute & Romantic Logout Modal */
+
+@keyframes cuteFloat {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-6px) rotate(2deg);
+  }
+}
+
+@keyframes cuteHeartPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+    filter: drop-shadow(0 0 8px rgba(247, 140, 160, 0.9));
+  }
+}
+
+.cuteModal__overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.6);
+  inset: 0;
+  background: rgba(12, 3, 18, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 9999;
+  padding: 16px;
+  box-sizing: border-box;
 }
 
-.modal__content {
-  background-color: #fff;
-  padding: 20px 30px;
-  border-radius: 8px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+.cuteModal__card {
+  width: 100%;
+  max-width: 420px;
+  background: rgba(32, 12, 44, 0.88);
+  backdrop-filter: blur(25px) saturate(180%);
+  -webkit-backdrop-filter: blur(25px) saturate(180%);
+  border: 1px solid rgba(247, 140, 160, 0.35);
+  border-radius: 26px;
+  padding: 32px 28px 28px 28px;
+  box-shadow: 0 25px 65px rgba(6, 1, 14, 0.75), 0 0 40px rgba(247, 140, 160, 0.2);
   text-align: center;
-  max-width: 400px;
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
-.modal__content h2 {
-  margin-top: 0;
-  color: #333;
+.cuteModal__card::before {
+  content: "";
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 180px;
+  height: 100px;
+  background: radial-gradient(circle, rgba(247, 140, 160, 0.28) 0%, transparent 70%);
+  filter: blur(25px);
+  pointer-events: none;
 }
 
-.modal__content p {
-  margin-bottom: 25px;
-  color: #666;
-}
-
-.modal__buttons {
+.cuteModal__iconWrapper {
+  width: 68px;
+  height: 68px;
+  margin: 0 auto 16px auto;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(247, 140, 160, 0.2) 0%, rgba(178, 121, 167, 0.2) 100%);
+  border: 2px solid rgba(247, 140, 160, 0.5);
+  box-shadow: 0 8px 25px rgba(247, 140, 160, 0.35);
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  animation: cuteFloat 4s ease-in-out infinite;
+}
+
+.cuteModal__iconEmoji {
+  font-size: 30px;
+  line-height: 1;
+}
+
+.cuteModal__floatingHeart {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  font-size: 16px;
+  animation: cuteHeartPulse 2s ease-in-out infinite;
+}
+
+.cuteModal__title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  background: linear-gradient(135deg, #ffffff 0%, #ffe4e8 40%, #f78ca0 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.cuteModal__divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   gap: 10px;
+  margin: 10px 0 14px 0;
 }
 
-.modal__button {
-  border: none;
-  padding: 10px 20px;
-  border-radius: 5px;
+.cuteModal__dividerLine {
+  height: 1px;
+  width: 40px;
+  background: linear-gradient(90deg, transparent, rgba(247, 140, 160, 0.6));
+}
+
+.cuteModal__dividerLine:last-child {
+  background: linear-gradient(90deg, rgba(247, 140, 160, 0.6), transparent);
+}
+
+.cuteModal__dividerHeart {
+  color: #f78ca0;
+  font-size: 13px;
+  line-height: 1;
+  animation: cuteHeartPulse 2s infinite ease-in-out;
+}
+
+.cuteModal__message {
+  font-size: 0.94rem;
+  color: rgba(255, 230, 240, 0.85);
+  line-height: 1.55;
+  margin: 0 0 24px 0;
+  font-weight: 300;
+}
+
+.cuteModal__message strong {
+  color: #f78ca0;
+  font-weight: 600;
+}
+
+.cuteModal__buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.cuteModal__btn {
+  flex: 1;
+  padding: 12px 18px;
+  border-radius: 20px;
+  font-size: 0.92rem;
+  font-weight: 600;
   cursor: pointer;
-  font-weight: bold;
-  font-size: 15px;
-  transition: background-color 0.2s ease;
+  border: none;
+  outline: none;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  letter-spacing: 0.3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.modal__button.cancel {
-  background-color: #f0f2f5;
-  color: #111;
+.cuteModal__btn--cancel {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(8px);
 }
 
-.modal__button.cancel:hover {
-  background-color: #e4e6eb;
+.cuteModal__btn--cancel:hover {
+  background: rgba(247, 140, 160, 0.2);
+  border-color: rgba(247, 140, 160, 0.5);
+  color: #ffe4e8;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(247, 140, 160, 0.2);
 }
 
-.modal__button.confirm {
-  background-color: #d93025;
-  color: white;
+.cuteModal__btn--confirm {
+  background: linear-gradient(135deg, #ff4d6d 0%, #f78ca0 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 16px rgba(255, 77, 109, 0.4);
 }
 
-.modal__button.confirm:hover {
-  background-color: #c52219;
+.cuteModal__btn--confirm:hover {
+  background: linear-gradient(135deg, #ff3355 0%, #f9748f 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 22px rgba(255, 77, 109, 0.6);
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 480px) {
+  .cuteModal__card {
+    padding: 26px 20px 22px 20px;
+    border-radius: 22px;
+  }
+  .cuteModal__title {
+    font-size: 1.2rem;
+  }
+  .cuteModal__message {
+    font-size: 0.88rem;
+    margin-bottom: 20px;
+  }
+  .cuteModal__buttons {
+    flex-direction: column-reverse;
+    gap: 10px;
+  }
+  .cuteModal__btn {
+    width: 100%;
+    padding: 12px;
+  }
 }

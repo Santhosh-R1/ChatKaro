@@ -6,7 +6,7 @@ import { signInWithPopup } from "firebase/auth";
 import { useStateValue } from "../ContextApi/StateProvider";
 import { actionTypes } from "../ContextApi/reducer";
 import { motion } from "framer-motion";
-import Emblem from "../../Assets/haia_emblem.svg";
+import Emblem from "../../Assets/haia_emblem.jpg";
 
 const containerVariants = {
   hidden: { opacity: 0, scale: 0.95 },

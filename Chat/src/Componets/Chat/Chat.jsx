@@ -8,7 +8,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useReactMediaRecorder } from "react-media-recorder";
 import Picker from "emoji-picker-react";
-import WelcomeLogo from "../../Assets/haia_emblem.svg";
+import WelcomeLogo from "../../Assets/haia_emblem.jpg";
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
